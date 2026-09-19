@@ -301,14 +301,27 @@ async def live(websocket: WebSocket, run_id: str | None = None, deployment_id: s
     rt: Runtime = websocket.app.state.runtime
     assert rt.live is not None
     connection = await rt.live.connect(websocket)
+
+    async def send_snapshot(since_revision: int | None) -> None:
+        if all(value is not None for value in (run_id, deployment_id, building_id, floor_id)):
+            from services.data.models import Mode
+            try:
+                data = rt.scope(run_id, deployment_id, building_id, floor_id, Mode(mode)).model_dump(mode="json")
+            except ValueError:
+                data = {"state_revision": rt.state_revision, "is_partial": True, "reason": "invalid_mode"}
+        else:
+            data = await rt.snapshot()
+        await websocket.send_json({"type": "snapshot", "state_revision": data.get("state_revision", rt.state_revision),
+                                   "data": data, "since_revision": since_revision})
+
     try:
         since = websocket.query_params.get("since_revision")
-        await rt.live.send_initial(connection, int(since) if since and since.isdigit() else None)
+        await send_snapshot(int(since) if since and since.isdigit() else None)
         while True:
             try:
                 message = await asyncio.wait_for(connection.queue.get(), timeout=15)
                 if message.get("type") == "snapshot_required":
-                    await rt.live.send_initial(connection, None)
+                    await send_snapshot(None)
                 else:
                     await websocket.send_json(message)
             except asyncio.TimeoutError:
