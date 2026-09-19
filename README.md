@@ -1,6 +1,6 @@
 # Seuranta
 
-Seuranta is a small frontend for looking at anonymous indoor-positioning data on a floor map. We built it to make the path from Raspberry Pi observations to a useful operator view easier to understand. The app has a real Three.js floor model, a believable local simulation, and a separate boundary for the live API.
+Seuranta is a web app for exploring anonymous indoor-positioning data on a live 3D floor map. We built it to make the path from Raspberry Pi observations to a useful operator view easier to understand. The app has a real Three.js floor model, a believable local simulation, and a separate boundary for the live API.
 
 The default demo is safe to run without a backend. It shows five anonymous sessions moving around Riverside Office Floor 2, four infrastructure anchors, confidence/accuracy information, and recent zone events. It never displays names, MAC addresses, raw packet payloads, or personal profiles.
 
@@ -19,7 +19,7 @@ Open the local URL printed by Vite. The app starts in Simulation mode, so there 
 npm.cmd run dev -- --host 127.0.0.1 --port 4173
 ```
 
-The demo starts with an elevated view of a 32 m × 22 m floor. Use the left entity list to select a device or anchor. Selecting a device updates the right detail panel and the marker on the map. Search filters the anonymous sessions. The Overview, Top, and Focus controls change the camera; after using Focus, selecting another device moves the focus once to that device. Drag the map to orbit, pan, or zoom. The Map layers controls turn entities, anchors, labels, confidence discs, and zones on or off.
+The demo starts with an elevated view of a 32 m × 22 m floor. Use the left entity list to select a device or anchor. Selecting a device updates the right detail panel and the marker on the map. Search filters the anonymous sessions. The Overview, Top, and Focus controls change the camera; after using Focus, selecting another device moves the focus once to that device. Drag the map to orbit or pan; scroll to zoom. The Map layers controls turn entities, anchors, labels, confidence discs, and zones on or off.
 
 The Simulation/Live switch is in the left navigation and top bar. Simulation is the reliable presentation path. Live is useful when a Seuranta API is available and otherwise shows an honest unavailable/empty state.
 
