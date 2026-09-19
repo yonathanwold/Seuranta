@@ -1,96 +1,115 @@
 # SEURANTA CONTINUATION PROMPT
 
-You are continuing the Seuranta frontend in `https://github.com/yonathanwold/Seuranta.git`.
+Continue the Seuranta frontend in `https://github.com/yonathanwold/Seuranta.git`.
 
-## First six steps
+## Start here
 
-1. Fetch the remote without changing unrelated branches: `git fetch origin`.
-2. Inspect the current checkout and recent commits: `git switch team/app`, `git status --short --branch`, and `git log --oneline --decorate -8`.
-3. Read this file and `docs/frontend-architecture.md` before changing code.
-4. Run the app with `npm.cmd install` and `npm.cmd run dev` (or the exact QA command `npm.cmd run dev -- --host 127.0.0.1 --port 4173`).
-5. Run `npm.cmd test`, `npm.cmd run lint`, and `npm.cmd run build`; also run `npm.cmd audit --omit=dev` when security status matters.
-6. Continue from the current implementation and its open items. Do not redesign the app or copy backend histories just because you are new to the repository.
+1. Run `git fetch origin`.
+2. Switch to `team/app` and inspect `git status --short --branch` plus `git log --oneline --decorate -8`.
+3. Read this file, `README.md`, and `docs/frontend-architecture.md`.
+4. Install and run the app with `npm.cmd install` and `npm.cmd run dev -- --host 127.0.0.1 --port 4173`.
+5. Run `npm.cmd test`, `npm.cmd run lint`, and `npm.cmd run build` before changing behavior.
+6. Continue from the current implementation. Do not restart or redesign working systems without a concrete reason.
 
-## Branch and commit context
+## Repository and Git state
 
-The current branch is `team/app`. It is an orphan frontend branch with no merge base with `team/edge`, `team/data-platform`, or `team/positioning`. Do not merge those histories into this branch. Do not reset, delete, force-push, or rewrite any of those three team branches.
+- Repository: `https://github.com/yonathanwold/Seuranta.git`
+- Current branch: `team/app`
+- Latest implementation commit when this handoff was written: `67f8f12` (`feat(app): switch demo to Virginia Tech classroom floor`)
+- Run `git rev-parse HEAD` after checkout for the exact newest handoff commit.
 
-The final SHA in this file is intentionally self-referential. After the last commit, run `git rev-parse HEAD` to get the exact final SHA; putting that value into this file would create another commit. The latest pre-handoff SHA is `70ab041687ee1ca1e00975775d11bac8fc68dc10` (`docs(app): record final live scope revision`).
+`team/app` is an orphan frontend history. It has no merge base with the three backend team branches. Do not merge those histories into this branch, force-push, or rewrite another team's branch.
 
-## Branches inspected
+Branches inspected:
 
-These upstream heads were inspected while building the frontend:
+- `origin/team/edge` at `7e9ce2a`
+- `origin/team/data-platform` at `9dff3ca`
+- `origin/team/positioning` at `5667d03`
 
-- `origin/team/edge` — `7e9ce2a`, Pi edge agent, heartbeat and mode/status conventions.
-- `origin/team/data-platform` — `4014883`, state reconstruction, REST, and WebSocket deltas.
-- `origin/team/positioning` — `5667d03`, position estimates, zones, smoothing, and event variants.
+The newer data-platform commit only imported edge documentation/files; it did not change the frontend API contract.
 
-They have unrelated root histories. Backend changes are outside the scope of `team/app`.
+## Current application
 
-## What is here
+The app is a React 18, TypeScript, Vite, Three.js, React Three Fiber, Drei, and Zustand frontend. It shows the first floor of Virginia Tech's Academic Classroom Building as the main operational map.
 
-- `src/domain/types.ts` — normalized organization/site/building/floor, position, event, node, state, and provider types.
-- `src/domain/adapters.ts` — the single snake_case-to-camelCase boundary, including mode/status and response-wrapper handling.
-- `src/domain/coordinates.ts` — tested metre-to-Three.js transform and inverse conversion.
-- `src/domain/floorDefinition.ts` — 32 m × 22 m Riverside Office Floor 2, rooms, zones, walls, and four configured anchor locations.
-- `src/domain/mockProvider.ts` — five anonymous sessions on smooth waypoint routes, confidence, accuracy, events, and mixed anchor health.
-- `src/domain/liveProvider.ts` — scoped REST/WS adapter, typed position/node/event deltas, strict four-field scope checks, revision handling, reconnects, and snapshot-required rehydration.
-- `src/domain/camera.ts` — one-shot Focus retargeting when the selected session identity changes.
-- `src/domain/store.ts` — Zustand mode, selection, search, snapshot, and layer state.
-- `src/components/MapCanvas.tsx` — R3F floor, orbit controls, markers, confidence discs, labels, camera presets, and Canvas fallback.
-- `src/App.tsx` and `src/styles.css` — the shell, explorer, details, controls, and visual system.
-- `src/tests/` — transform, floor, adapter, mock provider, live provider, and camera tests.
-- `docs/frontend-architecture.md` — contracts, module responsibilities, coordinates, provider behavior, and integration path.
-- `docs/demo-guide.md` — repeatable Simulation presentation flow.
-- `CONTRIBUTING.md` — branch, check, privacy, and pull request guidance.
-- `.github/PULL_REQUEST_TEMPLATE.md` — short review checklist.
-
-## Completed
-
-- Real Three.js/R3F floor geometry with a readable elevated view.
-- Smooth anonymous simulation with five sessions, four anchors, confidence, uncertainty, zone events, and anchor health.
-- Shared Mock/Live provider boundary with scoped live URLs and typed WebSocket deltas.
-- REST/WS mode normalization (`LIVE`/`SIMULATION` to `real`/`simulated`) and defensive scope/mode validation.
-- Entity search, linked list/map/detail selection, anchor diagnostics, recent activity, layer switches, and working Overview/Top/Focus controls.
-- Focus retargeting on selection identity changes without camera movement on routine telemetry ticks.
-- Honest live unavailable/empty state and a real Canvas WebGL fallback message with usable DOM lists.
-- Documentation, contribution notes, demo guide, privacy boundary, tests, lint, production build, and production-only audit check.
-
-## Incomplete and known limitations
-
-- No backend service is bundled. Live mode is expected to show unavailable or empty state until a compatible scoped API is running.
-- Building and floor are static demo context. Replay is not exposed because no replay provider exists.
-- The current backend heartbeat does not carry anchor coordinates; the floor definition remains authoritative for placement.
-- The browser QA tool provided a 1440 px-wide desktop viewport but no exact 1366 × 768 or 1920 × 1080 override. Those exact sizes still need a normal resizable browser check.
-- The production build prints the usual Three.js chunk-size advisory. No code-splitting work has been started.
-- If WebGL cannot initialize, the fallback is a concise message plus the entity/anchor DOM lists; there is no alternate DOM-rendered floor.
-- No functional app bug is known from the current checks. Unsupported surfaces such as analytics, settings forms, heatmaps, personal profiles, and summaries are intentionally omitted.
-
-## Checks and exact commands
-
-The current code has been checked with:
+Important files:
 
 ```text
-npm.cmd install
-npm.cmd test                 # 6 files, 16 tests passed
-npm.cmd run lint             # passed
-npm.cmd run build            # passed; Three.js chunk-size advisory only
-npm.cmd audit --omit=dev     # 0 production vulnerabilities
+public/models/
+  vt-academic-classroom.glb
+  vt-academic-classroom.meshopt.glb
+  vt-academic-classroom.metadata.json
+src/
+  App.tsx
+  styles.css
+  components/MapCanvas.tsx
+  domain/
+    adapters.ts
+    camera.ts
+    coordinates.ts
+    floorDefinition.ts
+    liveProvider.ts
+    mockProvider.ts
+    roomModel.ts
+    simulation.ts
+    store.ts
+    types.ts
+  tests/
+docs/
+  demo-guide.md
+  frontend-architecture.md
+README.md
+CONTRIBUTING.md
 ```
 
-The ordinary npm equivalents are `npm install`, `npm test`, `npm run lint`, `npm run build`, and `npm audit --omit=dev`.
+The app uses the uncompressed GLB because it is about 0.5 MB and opens without a Meshopt decoder. The compressed copy is kept for later optimization. `MapCanvas` clones the scene and removes `Floor_02`, `Floor_03`, and `Roof`, so the operational view is a first-floor cutaway without changing the source file.
 
-The local dev server used for browser QA was:
+## Completed features
 
-```powershell
-npm.cmd run dev -- --host 127.0.0.1 --port 4173
+- Virginia Tech first-floor 3D model with orbit, pan, zoom, Overview, Top, Focus, and Reset.
+- Six anonymous simulated devices on repeatable learning-space and circulation routes.
+- Four planned anchors with simulated online/degraded state.
+- Smooth marker interpolation, confidence, uncertainty radius, zones, timestamps, and activity events.
+- Search and linked list/map/detail selection.
+- Layer switches for devices, anchors, labels, uncertainty, and floor overlay.
+- Pause, play, restart, speed, and weak-signal simulation controls.
+- Floor setup for width, depth, origin, yaw, anchor IDs, and anchor coordinates.
+- Live setup for API URL and exact run/deployment/building/floor scope.
+- Shared normalized provider boundary for Simulation and Live.
+- Strict live snapshot/delta scope validation, monotonic revisions, abort/generation guards, data-less heartbeat handling, and honest unavailable states.
+- Responsive desktop layout checked at 1366×768 and 1920×1080.
+- Natural project documentation, demo guide, architecture notes, and privacy guidance.
+
+## Model and coordinate assumptions
+
+The supplied metadata says the model is reference-derived, not a survey or BIM:
+
+```text
+units: metres
+up axis: +Y
+ground plane: XZ
+estimated footprint: 76.9195 m × 44.6473 m
+scale uncertainty: about ±15%
+measured: false
 ```
 
-Manual QA covered Simulation movement, five anonymous devices, search, linked selection, layers, camera presets, Focus retargeting, manual orbit persistence across telemetry, Live unavailable state, and the browser console. The available browser showed no current app console errors; unrelated extension warnings and one stale pre-reload Vite HMR message were not app failures.
+One Three.js unit equals one metre. Backend `x_m` maps to world X. Backend `y_m` maps to world -Z. World Y is vertical. The floor-local backend range defaults to `(0, 0)` through approximately `(76.92, 44.65)`. The model scale is applied to the GLB only; telemetry must not be scaled twice. Origin and yaw are centralized in `src/domain/coordinates.ts`.
 
-## Contracts and assumptions
+Default live scope:
 
-Keep the exact PositionEstimate V1 fields in `docs/frontend-architecture.md`:
+```text
+run_id:        vt-acb-floor1
+deployment_id: vt-acb-pilot
+building_id:   vt-academic-classroom-building
+floor_id:      floor-1
+mode:          real
+```
+
+These values are placeholders for the pilot and can be changed in Floor setup.
+
+## Position and live contracts
+
+Position wire fields:
 
 ```text
 schema_version, position_id, calculated_at, window_start, window_end,
@@ -100,25 +119,84 @@ accuracy_radius_m, position_method, smoothing_method, anchors_used,
 observation_count, mode, sequence_number, is_outside_map
 ```
 
-The live boundary is scoped `GET /api/v1/state` plus `WS /api/v1/live`. Both use `run_id`, `deployment_id`, `building_id`, `floor_id`, and `real`/`simulated` mode query values. Reconnects use `since_revision` where possible. WebSocket messages are `{ type, state_revision, data }`; snapshots replace state, position/node/event messages update one entity, heartbeat/observation messages can advance revisions, and `snapshot_required` triggers a full refresh. Missing or cross-scope typed deltas must not be accepted.
+Live boundary:
 
-Keep adapter tolerance for bare versus `{ data: ... }` responses, edge uppercase modes/statuses, data-platform lowercase modes, positioning `attributes` versus data-platform `metadata`, and the known sessions/observation-batch shape differences. Do not put names, raw MACs, packet payloads, or personal identifiers into the UI.
+```text
+GET /api/v1/state
+WS  /api/v1/live
+{ type, state_revision, data }
+```
 
-The coordinate contract is one world unit per metre. The floor origin is `(16, 11)` m; backend `x_m` maps to world `x`, backend `y_m` maps to world `-z`, and world `y` is vertical. Use `src/domain/coordinates.ts` instead of repeating math in components.
+Full snapshots and typed position/node/event updates must match run, deployment, building, and floor. Lower revisions are ignored. `snapshot_required` forces a full REST reload. A data-less heartbeat may advance the revision. Changing scope clears old data immediately. Do not remove these protections to make an incomplete backend fixture pass.
 
-## Next priorities
+The future integration path remains:
 
-1. Run the demo in a normal browser at exactly 1366 × 768 and 1920 × 1080, then fix only concrete framing or readability problems.
-2. Connect a compatible data-platform API and test scoped snapshots, typed deltas, reconnects, and `snapshot_required` behavior without copying backend code into this branch.
-3. Add focused tests for any contract change and keep all existing checks green.
-4. Consider Three.js code splitting only if measured load/performance evidence makes it worth the added complexity.
+```text
+Raspberry Pi observations and heartbeats
+  -> data-platform ingestion
+  -> positioning and smoothing
+  -> state reconstruction
+  -> REST snapshot + WebSocket stream
+  -> Seuranta normalized state
+```
 
-## Ownership and active-file warning
+Do not add direct Pi networking to the frontend.
 
-The root lead owns architecture decisions, task scope, and final synthesis. The app implementation agent owns the `team/app` frontend, docs, tests, commits, and pushes. Read-only reviewers may inspect the branch but should not edit it.
+## Checks completed
 
-Files under `src/`, `docs/`, `README.md`, `CONTRIBUTING.md`, `.github/`, and this handoff are active. Everyone shares this checkout, so inspect `git status` before editing and preserve changes you did not make.
+```text
+npm.cmd run lint             passed
+npm.cmd test -- --run        7 files, 21 tests passed
+npm.cmd run build            passed
+npm.cmd audit --omit=dev     0 vulnerabilities
+```
 
-## Safe Git workflow
+The build prints Vite's chunk-size advisory because Three.js is in the main bundle. That is the only build warning.
 
-Use small conventional commits that build and test. Work only on `team/app`, push with a normal `git push origin team/app`, and never force-push. Do not use `git reset --hard`, merge unrelated team branches, or rewrite `origin/team/edge`, `origin/team/data-platform`, or `origin/team/positioning`. Before handing work back, run `git status --short --branch`, `git log --oneline -8`, the checks above, and `git rev-parse HEAD`.
+Manual browser QA covered:
+
+- WebGL model rendering at 1366×768 and 1920×1080
+- Overview, Top, and Focus
+- search and linked selection
+- pause/play and simulation movement
+- Floor setup values and live scope fields
+- Live unavailable state with zero fake devices
+- no horizontal overflow at the target desktop sizes
+
+## Incomplete work and known limits
+
+- The model scale, geometry, upper floors, and planned anchors are estimates. The team still needs an on-site measurement and anchor survey.
+- There is no backend bundled on `team/app`, so Live mode needs separately running team services.
+- Upper-floor switching, replay, heatmaps, and historical analytics are not implemented.
+- Simulation routes are metadata-informed demo loops, not validation of positioning accuracy.
+- The optimized Meshopt asset is stored but not loaded yet.
+- Three.js code splitting is not implemented.
+
+No active application bug was known when this handoff was written.
+
+## Immediate next priorities
+
+1. Run a small first-floor pilot: measure known points, choose the coordinate origin, and enter installed anchor coordinates.
+2. Start the data-platform API and validate a real scoped REST snapshot and WebSocket stream.
+3. Compare known physical device positions with the UI and record error before tuning confidence or smoothing.
+4. Add floor switching only when there is real positioning data for another floor.
+5. Optimize the bundle or enable Meshopt only if measured load time makes it necessary.
+
+Recommended assignments:
+
+- Lead: protect architecture and coordinate contracts, review integration decisions.
+- Frontend implementation: pilot setup, map interactions, and measured performance work.
+- Data integration: run the API and validate scope/revision behavior end to end.
+- Reviewer: independently check coordinate calibration and stale/cross-scope handling before a live demo.
+
+## Active files and Git workflow
+
+No files were intentionally left mid-edit at handoff. Still run `git status` because all agents share one checkout.
+
+Work on `team/app`. Use small conventional commits, run tests/lint/build before each push, and push with:
+
+```powershell
+git push origin team/app
+```
+
+Never force-push. Do not reset or delete `team/edge`, `team/data-platform`, or `team/positioning`. Fetch before bringing in teammate work, inspect the diff, resolve conflicts deliberately, and rerun all checks.
