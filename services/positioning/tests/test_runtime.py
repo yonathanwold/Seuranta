@@ -93,3 +93,16 @@ def test_positioner_can_require_all_configured_anchors():
     assert len(positions) == 1
     assert positions[0].observation_count == 4
     assert positioner.status.minimum_anchors == 4
+
+
+def test_positioner_projects_an_outside_rssi_estimate_onto_the_room_boundary():
+    positioner = InternalPositioner([
+        AnchorDefinition(anchor_id="pi-1", x_m=0, y_m=0),
+        AnchorDefinition(anchor_id="pi-2", x_m=6, y_m=0),
+        AnchorDefinition(anchor_id="pi-3", x_m=0, y_m=4),
+    ], boundary=[(0, 0), (6, 0), (6, 4), (0, 4)])
+
+    x_m, y_m, is_outside_map = positioner._constrain_to_boundary(7, 2)
+
+    assert (x_m, y_m, is_outside_map) == (6, 2, True)
+    assert positioner._constrain_to_boundary(2, 1) == (2, 1, False)

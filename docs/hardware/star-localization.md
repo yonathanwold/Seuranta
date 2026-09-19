@@ -60,18 +60,27 @@ measurements from the real room):
 export SEURANTA_INTERNAL_POSITIONING=true
 export SEURANTA_POSITIONING_WINDOW_SECONDS=10
 export SEURANTA_POSITIONING_MIN_ANCHORS=4
-export SEURANTA_POSITIONING_ANCHORS_JSON='[
-  {"anchor_id":"pi-1","x_m":0,"y_m":0,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
-  {"anchor_id":"pi-2","x_m":6,"y_m":0,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
-  {"anchor_id":"pi-3","x_m":0,"y_m":4,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
-  {"anchor_id":"pi-4","x_m":6,"y_m":4,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2}
-]'
+export SEURANTA_POSITIONING_ANCHORS_JSON='{
+  "anchors": [
+    {"anchor_id":"pi-1","x_m":0,"y_m":0,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
+    {"anchor_id":"pi-2","x_m":6,"y_m":0,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
+    {"anchor_id":"pi-3","x_m":0,"y_m":4,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
+    {"anchor_id":"pi-4","x_m":6,"y_m":4,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2}
+  ],
+  "boundary": [
+    {"x_m":0,"y_m":0}, {"x_m":6,"y_m":0},
+    {"x_m":6,"y_m":4}, {"x_m":0,"y_m":4}
+  ]
+}'
 ```
 
 When live RSSI observations arrive from the configured minimum number of
 anchors in the same session and time window, the API creates a position
 automatically. For the four-Pi room grid, require all four anchors and use a
 ten-second window so an incomplete or stale scan cannot move the phone dot.
+If a raw radio estimate falls beyond the configured boundary, the stored
+coordinate is projected onto the nearest boundary point and marked
+`is_outside_map: true`; the raw coordinate remains available for diagnostics.
 The API health endpoint exposes the internal estimator's configured-anchor,
 emitted, skipped, and latest-error counts.
 

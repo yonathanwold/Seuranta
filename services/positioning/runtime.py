@@ -13,6 +13,7 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from math import isfinite
 from statistics import median
 from uuid import NAMESPACE_URL, uuid5
 
@@ -26,6 +27,7 @@ class PositionerStatus:
     enabled: bool
     configured_anchors: int
     minimum_anchors: int
+    boundary_configured: bool
     emitted: int
     skipped: int
     last_error: str | None
@@ -33,7 +35,7 @@ class PositionerStatus:
 
 class InternalPositioner:
     def __init__(self, anchors: list[AnchorDefinition], window_seconds: float = 3.0,
-                 minimum_anchors: int = 3) -> None:
+                 minimum_anchors: int = 3, boundary: list[tuple[float, float]] | None = None) -> None:
         if len(anchors) < 3:
             raise ValueError("internal positioning needs at least three calibrated anchors")
         if window_seconds <= 0:
@@ -44,6 +46,7 @@ class InternalPositioner:
         if len(self._anchors) != len(anchors):
             raise ValueError("positioning anchor IDs must be unique")
         self._minimum_anchors = minimum_anchors
+        self._boundary = self._validate_boundary(boundary)
         self._window = timedelta(seconds=window_seconds)
         self._recent: dict[tuple[str, str, str, str, str, Mode, str], dict[str, SignalObservation]] = defaultdict(dict)
         self._scan_history: dict[
@@ -68,13 +71,34 @@ class InternalPositioner:
             anchors = [AnchorDefinition.model_validate(item) for item in values]
         except Exception as exc:
             raise ValueError("SEURANTA_POSITIONING_ANCHORS_JSON contains an invalid anchor") from exc
-        return cls(anchors, window_seconds, minimum_anchors)
+        boundary = cls._parse_boundary(decoded.get("boundary")) if isinstance(decoded, dict) else None
+        return cls(anchors, window_seconds, minimum_anchors, boundary)
 
     @property
     def status(self) -> PositionerStatus:
         return PositionerStatus(enabled=True, configured_anchors=len(self._anchors), minimum_anchors=self._minimum_anchors,
+                                boundary_configured=self._boundary is not None,
                                 emitted=self._emitted,
                                 skipped=self._skipped, last_error=self._last_error)
+
+    @staticmethod
+    def _parse_boundary(raw: object) -> list[tuple[float, float]] | None:
+        if raw is None:
+            return None
+        if not isinstance(raw, list):
+            raise ValueError("positioning boundary must be a list of x_m/y_m points")
+        try:
+            return [(float(item["x_m"]), float(item["y_m"])) for item in raw if isinstance(item, dict)]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("positioning boundary points must contain finite x_m and y_m values") from exc
+
+    @staticmethod
+    def _validate_boundary(boundary: list[tuple[float, float]] | None) -> tuple[tuple[float, float], ...] | None:
+        if boundary is None:
+            return None
+        if len(boundary) < 3 or any(not isfinite(x_m) or not isfinite(y_m) for x_m, y_m in boundary):
+            raise ValueError("positioning boundary needs at least three finite points")
+        return tuple(boundary)
 
     @staticmethod
     def _key(observation: SignalObservation) -> tuple[str, str, str, str, str, Mode, str]:
@@ -125,6 +149,59 @@ class InternalPositioner:
             "rssi_dbm": int(round(median(item.rssi_dbm for item in scans))),
         })
 
+    @staticmethod
+    def _point_on_segment(x_m: float, y_m: float, start: tuple[float, float], end: tuple[float, float]) -> bool:
+        start_x, start_y = start
+        end_x, end_y = end
+        cross = (x_m - start_x) * (end_y - start_y) - (y_m - start_y) * (end_x - start_x)
+        if abs(cross) > 1e-9:
+            return False
+        return (min(start_x, end_x) - 1e-9 <= x_m <= max(start_x, end_x) + 1e-9
+                and min(start_y, end_y) - 1e-9 <= y_m <= max(start_y, end_y) + 1e-9)
+
+    @classmethod
+    def _inside_boundary(cls, x_m: float, y_m: float, boundary: tuple[tuple[float, float], ...]) -> bool:
+        inside = False
+        previous = boundary[-1]
+        for current in boundary:
+            if cls._point_on_segment(x_m, y_m, previous, current):
+                return True
+            current_x, current_y = current
+            previous_x, previous_y = previous
+            crosses = (current_y > y_m) != (previous_y > y_m)
+            if crosses and x_m < (previous_x - current_x) * (y_m - current_y) / (previous_y - current_y) + current_x:
+                inside = not inside
+            previous = current
+        return inside
+
+    @staticmethod
+    def _nearest_boundary_point(x_m: float, y_m: float,
+                                boundary: tuple[tuple[float, float], ...]) -> tuple[float, float]:
+        nearest: tuple[float, float] | None = None
+        nearest_distance_sq = float("inf")
+        previous = boundary[-1]
+        for current in boundary:
+            start_x, start_y = previous
+            end_x, end_y = current
+            delta_x = end_x - start_x
+            delta_y = end_y - start_y
+            length_sq = delta_x ** 2 + delta_y ** 2
+            progress = 0.0 if length_sq == 0 else ((x_m - start_x) * delta_x + (y_m - start_y) * delta_y) / length_sq
+            progress = max(0.0, min(1.0, progress))
+            candidate = (start_x + progress * delta_x, start_y + progress * delta_y)
+            distance_sq = (x_m - candidate[0]) ** 2 + (y_m - candidate[1]) ** 2
+            if distance_sq < nearest_distance_sq:
+                nearest, nearest_distance_sq = candidate, distance_sq
+            previous = current
+        assert nearest is not None
+        return nearest
+
+    def _constrain_to_boundary(self, x_m: float, y_m: float) -> tuple[float, float, bool]:
+        if self._boundary is None or self._inside_boundary(x_m, y_m, self._boundary):
+            return x_m, y_m, False
+        constrained_x, constrained_y = self._nearest_boundary_point(x_m, y_m, self._boundary)
+        return constrained_x, constrained_y, True
+
     def _estimate(self, key: tuple[str, str, str, str, str, Mode, str],
                   observations: list[SignalObservation]) -> PositionEstimate:
         run_id, deployment_id, building_id, floor_id, session_id, mode, source = key
@@ -136,6 +213,7 @@ class InternalPositioner:
             for item in observations
         ]
         result = estimate_rssi_position(readings)
+        x_m, y_m, is_outside_map = self._constrain_to_boundary(result.x_m, result.y_m)
         fingerprint = ":".join(f"{item.anchor_id}={item.observation_id}" for item in sorted(observations, key=lambda item: item.anchor_id))
         position_id = str(uuid5(NAMESPACE_URL, f"seuranta-position:{run_id}:{deployment_id}:{building_id}:{floor_id}:{session_id}:{source}:{fingerprint}"))
         return PositionEstimate(
@@ -150,8 +228,8 @@ class InternalPositioner:
             session_id=session_id,
             raw_x_m=result.x_m,
             raw_y_m=result.y_m,
-            x_m=result.x_m,
-            y_m=result.y_m,
+            x_m=x_m,
+            y_m=y_m,
             confidence=result.confidence,
             accuracy_radius_m=result.accuracy_radius_m,
             position_method=f"rssi_log_distance_multilateration/{source}",
@@ -160,6 +238,7 @@ class InternalPositioner:
             observation_count=len(observations),
             mode=mode,
             sequence_number=max(item.sequence_number for item in observations),
+            is_outside_map=is_outside_map,
         )
 
     def ingest(self, observations: list[SignalObservation]) -> list[PositionEstimate]:

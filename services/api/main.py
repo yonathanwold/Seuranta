@@ -357,6 +357,8 @@ async def health(rt: Runtime = Depends(runtime)):
                             "forwarded": rt.forwarder.forwarded, "failed": rt.forwarder.failed,
                             "internal": {"status": "enabled" if internal else "disabled",
                                          "configured_anchors": internal.configured_anchors if internal else 0,
+                                         "minimum_anchors": internal.minimum_anchors if internal else 0,
+                                         "boundary_configured": internal.boundary_configured if internal else False,
                                          "emitted": internal.emitted if internal else 0,
                                          "skipped": internal.skipped if internal else 0,
                                          "last_error": internal.last_error if internal else None}},
