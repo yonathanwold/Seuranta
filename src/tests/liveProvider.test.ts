@@ -2,29 +2,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LivePositionProvider } from '../domain/liveProvider'
 
 const scope = { runId: 'run-1', deploymentId: 'deployment-1', buildingId: 'building-1', floorId: 'floor-2', mode: 'LIVE' as const }
+const wireScope = { run_id: scope.runId, deployment_id: scope.deploymentId, building_id: scope.buildingId, floor_id: scope.floorId }
 
 const position = (sessionId = 'session-a', xM = 4) => ({
   schema_version: '1.0', position_id: `position-${sessionId}`, calculated_at: '2026-09-19T12:00:00.000Z',
-  window_start: '2026-09-19T11:59:59.000Z', window_end: '2026-09-19T12:00:00.000Z', ...scope,
+  window_start: '2026-09-19T11:59:59.000Z', window_end: '2026-09-19T12:00:00.000Z', ...wireScope,
   session_id: sessionId, raw_x_m: xM, raw_y_m: 3, x_m: xM, y_m: 3, zone_id: 'office', confidence: .92,
   accuracy_radius_m: .8, position_method: 'wknn', smoothing_method: 'ema', anchors_used: ['a-01'], observation_count: 4,
   mode: 'real', sequence_number: 1, is_outside_map: false,
 })
 
 const node = (anchorId = 'a-01') => ({
-  schema_version: '1.0', heartbeat_id: `heartbeat-${anchorId}`, emitted_at: '2026-09-19T12:00:00.000Z', ...scope,
+  schema_version: '1.0', heartbeat_id: `heartbeat-${anchorId}`, emitted_at: '2026-09-19T12:00:00.000Z', ...wireScope,
   anchor_id: anchorId, node_kind: 'anchor', mode: 'real', status: 'online', uptime_s: 10, buffer_depth: 0,
   observations_sent_total: 3, last_observation_at: '2026-09-19T11:59:59.000Z', capture_ok: true, error_codes: [],
 })
 
 const event = (eventId = 'event-1') => ({
-  event_id: eventId, event_type: 'ZONE_ENTERED', occurred_at: '2026-09-19T12:00:00.000Z', emitted_at: '2026-09-19T12:00:00.000Z', ...scope,
+  event_id: eventId, event_type: 'ZONE_ENTERED', occurred_at: '2026-09-19T12:00:00.000Z', emitted_at: '2026-09-19T12:00:00.000Z', ...wireScope,
   mode: 'real', session_id: 'session-a', to_zone_id: 'office', event_sequence: 1,
 })
 
 const snapshot = (revision = 4, positions = [position()]) => ({
   data: {
-    state_revision: revision, generated_at: '2026-09-19T12:00:00.000Z', ...scope, mode: 'real', positions,
+    state_revision: revision, generated_at: '2026-09-19T12:00:00.000Z', ...wireScope, mode: 'real', positions,
     nodes: [node()], recent_events: [], zone_metrics: [], counts: {}, is_partial: false,
   },
 })
@@ -104,6 +105,31 @@ describe('live provider', () => {
     expect(states.at(-1)).toEqual({ revision: 9, positionX: 9, nodes: 2, events: 1 })
     socket.send('heartbeat', {}, 8)
     expect(states.at(-1)?.revision).toBe(9)
+    provider.stop()
+  })
+
+  it('ignores missing or cross-scope position, node, and event deltas', async () => {
+    const provider = new LivePositionProvider(scope)
+    const states: Array<{ revision: number; positions: number; nodes: number; events: number }> = []
+    provider.start(({ state }) => states.push({ revision: state.stateRevision, positions: state.positions.length, nodes: state.nodes.length, events: state.recentEvents.length }))
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1))
+    const socket = FakeWebSocket.instances[0]
+    const missingPosition = { ...position('session-missing') } as Record<string, unknown>
+    delete missingPosition.run_id
+    const crossPosition = { ...position('session-cross'), floor_id: 'floor-elsewhere' }
+    const missingNode = { ...node('a-missing') } as Record<string, unknown>
+    delete missingNode.deployment_id
+    const crossNode = { ...node('a-cross'), building_id: 'building-elsewhere' }
+    const missingEvent = { ...event('event-missing') } as Record<string, unknown>
+    delete missingEvent.floor_id
+    const crossEvent = { ...event('event-cross'), run_id: 'run-elsewhere' }
+    socket.send('position', missingPosition, 8)
+    socket.send('position', crossPosition, 9)
+    socket.send('node', missingNode, 10)
+    socket.send('node', crossNode, 9)
+    socket.send('event', missingEvent, 11)
+    socket.send('event', crossEvent, 12)
+    expect(states.at(-1)).toEqual({ revision: 4, positions: 1, nodes: 1, events: 0 })
     provider.stop()
   })
 

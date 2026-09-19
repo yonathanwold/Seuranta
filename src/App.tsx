@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart3, Building2, ChevronDown, ChevronRight, Crosshair, Layers3, Radio, Search, Sparkles, Target, Users, Wifi, X, ZoomIn } from 'lucide-react'
 import { MapCanvas } from './components/MapCanvas'
+import { cameraAfterSelection } from './domain/camera'
 import { LivePositionProvider } from './domain/liveProvider'
 import { MockPositionProvider } from './domain/mockProvider'
 import { demoFloor } from './domain/floorDefinition'
@@ -89,7 +90,12 @@ function App() {
   const provider = useMemo(() => mode === 'LIVE' ? new LivePositionProvider() : new MockPositionProvider(), [mode])
   useEffect(() => { provider.start(applySnapshot); return () => provider.stop() }, [provider, applySnapshot])
   const onMode = (nextMode: NormalizedMode) => { setMode(nextMode); setSearch(''); if (nextMode !== 'SIMULATION') setSelectedId(null) }
-  const onSelect = (id: string) => { setSelectedId(id); if (id.startsWith('session-')) setCameraPreset((current) => current === 'focus' ? current : 'overview') }
+  const onSelect = (id: string) => {
+    const nextCamera = cameraAfterSelection({ preset: cameraPreset, selectedId, request: cameraRequest }, id)
+    setSelectedId(id)
+    setCameraPreset(nextCamera.preset)
+    setCameraRequest(nextCamera.request)
+  }
   const onCameraPreset = (preset: 'overview' | 'top' | 'focus') => { setCameraPreset(preset); setCameraRequest((request) => request + 1) }
   const onRefresh = () => { void provider.refresh() }
   return <div className="app-shell"><Navigation mode={mode} onMode={onMode} /><div className="app-content"><TopBar mode={mode} status={providerStatus} cameraPreset={cameraPreset} onCameraPreset={onCameraPreset} onMode={onMode} onRefresh={onRefresh} /><main className="main-grid"><Explorer state={snapshot} search={search} onSearch={setSearch} selectedId={selectedId} onSelect={onSelect} showLayers={showLayers} onToggle={(key) => { setShowLayers((current) => ({ ...current, [key]: !current[key] })); toggleLayer(`show${key.charAt(0).toUpperCase()}${key.slice(1)}` as 'showEntities' | 'showAnchors' | 'showLabels' | 'showConfidence' | 'showZones') }} /><section className="map-region"><div className="map-header"><div><h1>{demoFloor.label}</h1><span>{modeCopy[mode]} workspace · {snapshot.counts.activeSessions} active sessions</span></div><div className="map-revision"><span>Revision {snapshot.stateRevision}</span><span>{snapshot.generatedAt ? formatAge(snapshot.generatedAt) : '—'}</span></div></div><MapCanvas state={snapshot} selectedId={selectedId} onSelect={onSelect} showEntities={showLayers.entities} showAnchors={showLayers.anchors} showLabels={showLayers.labels} showConfidence={showLayers.confidence} showZones={showLayers.zones} cameraPreset={cameraPreset} cameraRequest={cameraRequest} /><div className="map-legend"><span><i className="legend-dot entity" /> Sessions</span><span><i className="legend-diamond" /> Anchors</span><span><i className="legend-ring" /> Uncertainty</span></div></section><DetailPanel state={snapshot} selectedId={selectedId} onClose={() => setSelectedId(null)} onSelect={onSelect} /></main></div></div>

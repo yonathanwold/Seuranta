@@ -1,4 +1,4 @@
-import { adaptEvent, adaptNode, adaptPosition, adaptState, unwrapData } from './adapters'
+import { adaptEvent, adaptMode, adaptNode, adaptPosition, adaptState, unwrapData } from './adapters'
 import type { NormalizedMode, NormalizedState, PositionProvider, ProviderSnapshot } from './types'
 
 const apiBase = (import.meta.env.VITE_SEURANTA_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
@@ -20,6 +20,7 @@ const isRecord = (value: unknown): value is WireRecord => Boolean(value && typeo
 const isStatePayload = (value: unknown): value is WireRecord => isRecord(value) && (typeof value.state_revision === 'number' || Array.isArray(value.positions) || Array.isArray(value.nodes) || Array.isArray(value.recent_events))
 const revisionOf = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.round(value)) : undefined
 const wireMode = (mode: NormalizedMode | undefined): 'real' | 'simulated' => mode === 'SIMULATION' ? 'simulated' : 'real'
+const wireScopeFields = ['run_id', 'deployment_id', 'building_id', 'floor_id'] as const
 
 /** Live adapter: scoped REST snapshot plus typed state-revision WebSocket deltas. */
 export class LivePositionProvider implements PositionProvider {
@@ -130,7 +131,7 @@ export class LivePositionProvider implements PositionProvider {
     const data = unwrapData(message.data)
     if (!isRecord(data)) return
     if (type === 'position') {
-      if (typeof data.session_id !== 'string' || !data.session_id || typeof data.x_m !== 'number' || typeof data.y_m !== 'number') return
+      if (!this.hasMatchingWireScope(data) || typeof data.session_id !== 'string' || !data.session_id || typeof data.x_m !== 'number' || typeof data.y_m !== 'number') return
       const position = adaptPosition(data)
       if (!this.inScope(position.runId, position.deploymentId, position.buildingId, position.floorId)) return
       const positions = this.replaceBy(this.state.positions, position.sessionId, position, (item) => item.sessionId)
@@ -139,7 +140,7 @@ export class LivePositionProvider implements PositionProvider {
       return
     }
     if (type === 'node') {
-      if (typeof data.anchor_id !== 'string' || !data.anchor_id) return
+      if (!this.hasMatchingWireScope(data) || typeof data.anchor_id !== 'string' || !data.anchor_id) return
       const node = adaptNode(data)
       if (!this.inScope(node.runId, node.deploymentId, node.buildingId, node.floorId)) return
       const nodes = this.replaceBy(this.state.nodes, node.anchorId, node, (item) => item.anchorId)
@@ -150,7 +151,7 @@ export class LivePositionProvider implements PositionProvider {
       return
     }
     if (type === 'event') {
-      if (typeof data.event_id !== 'string' || !data.event_id || typeof data.event_type !== 'string' || !data.event_type) return
+      if (!this.hasMatchingWireScope(data) || typeof data.event_id !== 'string' || !data.event_id || typeof data.event_type !== 'string' || !data.event_type) return
       const eventValue = adaptEvent(data)
       if (!this.inScope(eventValue.runId, eventValue.deploymentId, eventValue.buildingId, eventValue.floorId)) return
       this.state = { ...this.state, stateRevision: Math.max(this.state.stateRevision, revision ?? this.state.stateRevision), generatedAt: eventValue.emittedAt, recentEvents: [eventValue, ...this.state.recentEvents.filter((item) => item.eventId !== eventValue.eventId)].slice(0, 25) }
@@ -165,8 +166,16 @@ export class LivePositionProvider implements PositionProvider {
     if (revision !== undefined && revision > this.state.stateRevision) { this.state = { ...this.state, stateRevision: revision }; this.emit('live') }
   }
 
+  private hasMatchingWireScope(data: WireRecord): boolean {
+    const values = wireScopeFields.map((field) => data[field])
+    if (values.some((value) => typeof value !== 'string' || !value)) return false
+    if (values[0] !== this.scope.runId || values[1] !== this.scope.deploymentId || values[2] !== this.scope.buildingId || values[3] !== this.scope.floorId) return false
+    if (data.mode !== undefined && (typeof data.mode !== 'string' || adaptMode(data.mode) !== (this.scope.mode ?? 'LIVE'))) return false
+    return true
+  }
+
   private inScope(runId: string, deploymentId: string, buildingId: string, floorId: string): boolean {
-    return (!runId || runId === this.scope.runId) && (!deploymentId || deploymentId === this.scope.deploymentId) && (!buildingId || buildingId === this.scope.buildingId) && (!floorId || floorId === this.scope.floorId)
+    return runId === this.scope.runId && deploymentId === this.scope.deploymentId && buildingId === this.scope.buildingId && floorId === this.scope.floorId
   }
 
   private replaceBy<T>(items: T[], key: string, next: T, getKey: (item: T) => string): T[] {
