@@ -41,6 +41,9 @@ class InternalPositioner:
             raise ValueError("positioning anchor IDs must be unique")
         self._window = timedelta(seconds=window_seconds)
         self._recent: dict[tuple[str, str, str, str, str, Mode, str], dict[str, SignalObservation]] = defaultdict(dict)
+        self._scan_history: dict[
+            tuple[str, str, str, str, str, Mode, str], dict[str, list[SignalObservation]]
+        ] = defaultdict(lambda: defaultdict(list))
         self._last_fingerprint: dict[tuple[str, str, str, str, str, Mode, str], tuple[tuple[str, str], ...]] = {}
         self._emitted = 0
         self._skipped = 0
@@ -101,6 +104,20 @@ class InternalPositioner:
 
         return sorted(aggregated, key=lambda item: item[1].observed_at)
 
+    @staticmethod
+    def _aggregate_recent_scans(
+        key: tuple[str, str, str, str, str, Mode, str], anchor_id: str, scans: list[SignalObservation]
+    ) -> SignalObservation:
+        """Produce one stable RSSI input from an anchor's recent scans."""
+
+        representative = max(scans, key=lambda item: (item.observed_at, item.sequence_number, item.observation_id))
+        scan_ids = ":".join(sorted(item.observation_id for item in scans))
+        aggregate_id = str(uuid5(NAMESPACE_URL, f"seuranta-rssi-window:{key}:{anchor_id}:{scan_ids}"))
+        return representative.model_copy(update={
+            "observation_id": aggregate_id,
+            "rssi_dbm": int(round(median(item.rssi_dbm for item in scans))),
+        })
+
     def _estimate(self, key: tuple[str, str, str, str, str, Mode, str],
                   observations: list[SignalObservation]) -> PositionEstimate:
         run_id, deployment_id, building_id, floor_id, session_id, mode, source = key
@@ -144,13 +161,24 @@ class InternalPositioner:
             current = self._recent[key].get(observation.anchor_id)
             if current is None or observation.observed_at >= current.observed_at:
                 self._recent[key][observation.anchor_id] = observation
+                history = self._scan_history[key][observation.anchor_id]
+                history[:] = [item for item in history if item.observed_at != observation.observed_at]
+                history.append(observation)
+                history.sort(key=lambda item: item.observed_at)
                 changed.add(key)
 
         positions: list[PositionEstimate] = []
         for key in changed:
             per_anchor = self._recent[key]
             latest_at = max(item.observed_at for item in per_anchor.values())
-            fresh = [item for item in per_anchor.values() if latest_at - item.observed_at <= self._window]
+            fresh = []
+            for anchor_id in per_anchor:
+                scans = [
+                    item for item in self._scan_history[key][anchor_id]
+                    if latest_at - item.observed_at <= self._window
+                ]
+                if scans:
+                    fresh.append(self._aggregate_recent_scans(key, anchor_id, scans))
             if len(fresh) < 3:
                 self._skipped += 1
                 continue
@@ -173,10 +201,18 @@ class InternalPositioner:
 
     def _discard_stale(self) -> None:
         cutoff = utc_now() - self._window * 2
+        for key, per_anchor in list(self._scan_history.items()):
+            for anchor_id, history in list(per_anchor.items()):
+                per_anchor[anchor_id] = [item for item in history if item.observed_at >= cutoff]
+                if not per_anchor[anchor_id]:
+                    del per_anchor[anchor_id]
+            if not per_anchor:
+                del self._scan_history[key]
         for key, per_anchor in list(self._recent.items()):
             for anchor_id, observation in list(per_anchor.items()):
                 if observation.observed_at < cutoff:
                     del per_anchor[anchor_id]
             if not per_anchor:
                 del self._recent[key]
-                self._last_fingerprint.pop(key, None)
+                if key not in self._scan_history:
+                    self._last_fingerprint.pop(key, None)

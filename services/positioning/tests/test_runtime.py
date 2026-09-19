@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from services.data.models import AnchorDefinition, Mode, SignalObservation, utc_now
 from services.positioning.runtime import InternalPositioner
@@ -51,3 +51,22 @@ def test_positioner_uses_the_median_rssi_for_each_anchor_scan():
     }
     assert len(positions) == 1
     assert positions[0].observation_count == 4
+
+
+def test_positioner_uses_the_median_of_recent_scans_for_an_anchor():
+    positioner = InternalPositioner([
+        AnchorDefinition(anchor_id="pi-1", x_m=0, y_m=0),
+        AnchorDefinition(anchor_id="pi-2", x_m=6, y_m=0),
+        AnchorDefinition(anchor_id="pi-3", x_m=0, y_m=4),
+    ])
+    observed_at = utc_now()
+    scans = [
+        _observation("pi-1", -70, 1, observed_at),
+        _observation("pi-1", -50, 2, observed_at + timedelta(seconds=8)),
+        _observation("pi-1", -60, 3, observed_at + timedelta(seconds=16)),
+    ]
+
+    aggregate = positioner._aggregate_recent_scans(positioner._key(scans[0]), "pi-1", scans)
+
+    assert aggregate.rssi_dbm == -60
+    assert aggregate.observation_id not in {scan.observation_id for scan in scans}
