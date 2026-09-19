@@ -18,7 +18,7 @@ npm.cmd test
 npm.cmd run build
 ```
 
-The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` to obtain the exact final value. This handoff revision cannot safely contain its own SHA; the latest pre-handoff SHA before this handoff revision is `12e5fa4d4327a8d5b6bdfe8a6d3b2d16223d998c` (`fix(app): harden live deltas and operational controls`).
+The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` to obtain the exact final value. This handoff revision cannot safely contain its own SHA; the latest pre-handoff SHA before this handoff revision is `e391830aca0cf91727f8c47389e9bc55a5fdab4a` (`fix(app): retarget focus and enforce live scope`).
 
 ## Inspect before editing
 
@@ -37,8 +37,8 @@ These histories are unrelated. Backend changes are out of scope for this fronten
 - `src/domain/coordinates.ts`: one world unit per metre, backend x → world x, backend y → world -z, centred `(16, 11)` origin.
 - `src/domain/floorDefinition.ts`: 32 m × 22 m Riverside Office Floor 2, 0.25 m slab, 0.65 m walls, room/zone polygons, and four anchor coordinates.
 - `src/domain/mockProvider.ts`: five anonymous sessions on believable routes, confidence/accuracy, events, zone occupancy, and mixed anchor status.
-- `src/domain/liveProvider.ts`: scoped `GET /api/v1/state` plus `/api/v1/live` WebSocket with typed position/node/event reduction, bounded reconnect, snapshot-required rehydration, revision preservation, and last-state preservation.
-- `src/components/MapCanvas.tsx`: R3F floor geometry, OrbitControls, explicit Overview/Top/Focus camera requests, entity interpolation, anchors, confidence disc, labels, and Canvas WebGL fallback message.
+- `src/domain/liveProvider.ts`: scoped `GET /api/v1/state` plus `/api/v1/live` WebSocket with typed position/node/event reduction, strict four-field wire scope validation, bounded reconnect, snapshot-required rehydration, revision preservation, and last-state preservation.
+- `src/components/MapCanvas.tsx` / `src/domain/camera.ts`: R3F floor geometry, OrbitControls, explicit Overview/Top/Focus camera requests, one-shot Focus retargeting on selection identity changes, entity interpolation, anchors, confidence disc, labels, and Canvas WebGL fallback message.
 - `src/App.tsx` and `src/styles.css`: operation shell, explorer, synchronized selection/search, detail panel, layer controls, responsive design system.
 - `src/tests/`: coordinate, adapter, and provider unit coverage.
 
@@ -67,7 +67,7 @@ The following were run successfully during this handoff:
 
 ```text
 npm.cmd install
-npm.cmd test       # 5 files, 13 tests passed
+npm.cmd test       # 6 files, 16 tests passed
 npm.cmd run lint   # passed
 npm.cmd run build  # TypeScript + Vite production build passed; chunk-size advisory only
 npm.cmd audit      # 5 vulnerabilities (3 moderate, 1 high, 1 critical); npm recommends --force, not applied
