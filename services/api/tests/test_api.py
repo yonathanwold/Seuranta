@@ -90,3 +90,15 @@ def test_session_and_grounded_intelligence(client):
     assert data["grounded"] is True
     assert data["facts"]
     assert "source_ref" in data["facts"][0]
+
+
+def test_websocket_snapshot_and_delta(client):
+    url = "/api/v1/live?run_id=run-1&deployment_id=dep-1&building_id=building-1&floor_id=floor-1&mode=simulated"
+    with client.websocket_connect(url) as websocket:
+        snapshot = websocket.receive_json()
+        assert snapshot["type"] == "snapshot"
+        assert snapshot["data"]["building_id"] == "building-1"
+        client.post("/api/v1/observations", json=observation("ws-observation", 4))
+        delta = websocket.receive_json()
+        assert delta["type"] in {"observation", "anomaly"}
+        assert delta["state_revision"] > snapshot["state_revision"]
