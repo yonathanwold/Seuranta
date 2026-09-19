@@ -96,17 +96,28 @@ const zoneName = (zoneId: string) => ({ office: 'Office zone', meeting: 'Meeting
 function CameraController({ preset, selected }: { preset: MapCanvasProps['cameraPreset']; selected?: PositionEstimate }) {
   const { camera } = useThree()
   const controls = useRef<OrbitControlsImpl>(null)
+  const cameraTarget = useRef(new THREE.Vector3(27, 25, 27))
+  const lookTarget = useRef(new THREE.Vector3(0, 0, 0))
+  const transitionActive = useRef(false)
   const destination = useMemo(() => preset === 'top' ? new THREE.Vector3(0, 42, 0.01) : preset === 'focus' && selected ? (() => { const point = positionToWorld(selected, origin); return new THREE.Vector3(point.x + 13, 20, point.z + 13) })() : new THREE.Vector3(27, 25, 27), [preset, selected])
   useEffect(() => {
-    camera.position.copy(destination)
+    cameraTarget.current.copy(destination)
     camera.zoom = preset === 'focus' ? 19 : preset === 'top' ? 13 : 11
     const target = preset === 'focus' && selected ? positionToWorld(selected, origin) : { x: 0, z: 0 }
-    controls.current?.target.set(target.x, 0, target.z)
-    camera.lookAt(target.x, 0, target.z)
+    lookTarget.current.set(target.x, 0, target.z)
+    transitionActive.current = true
     camera.updateProjectionMatrix()
-    controls.current?.update()
   }, [camera, destination, preset, selected])
-  return <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.08} minZoom={8} maxZoom={30} minPolarAngle={0.45} maxPolarAngle={Math.PI / 2.08} />
+  useFrame((_state, delta) => {
+    if (transitionActive.current) {
+      const amount = Math.min(1, delta * 5.2)
+      camera.position.lerp(cameraTarget.current, amount)
+      controls.current?.target.lerp(lookTarget.current, amount)
+      camera.lookAt(controls.current?.target ?? lookTarget.current)
+      if (camera.position.distanceTo(cameraTarget.current) < 0.06) transitionActive.current = false
+    }
+  })
+  return <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.08} minZoom={8} maxZoom={30} minPolarAngle={0.45} maxPolarAngle={Math.PI / 2.08} onStart={() => { transitionActive.current = false }} />
 }
 
 function FloorScene({ state, selectedId, onSelect, showEntities, showAnchors, showLabels, showConfidence, showZones, cameraPreset }: MapCanvasProps) {
