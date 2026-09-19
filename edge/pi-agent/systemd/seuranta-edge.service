@@ -1,0 +1,22 @@
+[Unit]
+Description=Seuranta Atlas edge agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=seuranta
+Group=seuranta
+WorkingDirectory=/opt/seuranta-edge
+EnvironmentFile=/etc/seuranta-edge/edge.env
+ExecStart=/usr/bin/python3 -m seuranta_edge --config-file /etc/seuranta-edge/config.json run
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/seuranta-edge
+
+[Install]
+WantedBy=multi-user.target
