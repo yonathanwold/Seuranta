@@ -1,11 +1,11 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { FirstPersonControls, Html, OrbitControls, useGLTF } from '@react-three/drei'
-import type { FirstPersonControls as FirstPersonControlsImpl, OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Html, OrbitControls, useGLTF } from '@react-three/drei'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import * as THREE from 'three'
 import { PHOTO_ROOM_ASSET, roomAssetScaleXY, roomDimensions, type RoomModelConfig } from '../domain/roomModel'
 import { mapToRoomAsset, roomAssetToMap } from '../domain/coordinates'
-import { isWalkablePoint } from '../domain/simulation'
+import { moveWithinFloor, walkthroughStart } from '../domain/walkthrough'
 import type { NodeHeartbeat, NormalizedState, PositionEstimate } from '../domain/types'
 
 interface MapCanvasProps {
@@ -22,6 +22,8 @@ interface MapCanvasProps {
   cameraRequest: number
   buildingView: 'all' | 'floor-1'
   walkthrough: boolean
+  staticPreview: boolean
+  onExitWalkthrough: () => void
 }
 
 const statusColor: Record<NodeHeartbeat['status'], string> = { online: '#12a772', degraded: '#a76212', offline: '#b94747' }
@@ -74,6 +76,7 @@ function AnchorMarker({ anchor, node, showLabels, onSelect, config }: { anchor: 
 function EntityMarker({ position, selected, showConfidence, showLabels, onSelect, config }: { position: PositionEstimate; selected: boolean; showConfidence: boolean; showLabels: boolean; onSelect: () => void; config: RoomModelConfig }) {
   const target = mapToRoomAsset(position, config, 0.48)
   const group = useRef<THREE.Group>(null)
+  const initial = useRef([target.x, target.y, target.z] as [number, number, number])
   const [hovered, setHovered] = useState(false)
   const targetRef = useRef(new THREE.Vector3(target.x, target.y, target.z))
   useEffect(() => { targetRef.current.set(target.x, target.y, target.z) }, [target.x, target.y, target.z])
@@ -82,14 +85,14 @@ function EntityMarker({ position, selected, showConfidence, showLabels, onSelect
     group.current.position.lerp(targetRef.current, Math.min(1, delta * 5.5))
   })
   const radius = Math.max(0.25, position.accuracyRadiusM)
-  return <group ref={group} position={[target.x, target.y, target.z]} onClick={(event) => { event.stopPropagation(); onSelect() }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
+  return <group ref={group} position={initial.current} onClick={(event) => { event.stopPropagation(); onSelect() }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
     {showConfidence && (selected || hovered) && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.44, 0]}>
       <circleGeometry args={[radius, 48]} />
       <meshBasicMaterial color="#151515" transparent opacity={selected ? 0.12 : 0.05} depthWrite={false} />
     </mesh>}
-    <mesh castShadow>
-      <sphereGeometry args={[selected ? 0.16 : 0.12, 20, 14]} />
-      <meshStandardMaterial color="#151515" emissive="#151515" emissiveIntensity={selected ? 0.18 : 0.02} roughness={0.45} />
+    <mesh renderOrder={10}>
+      <sphereGeometry args={[selected ? 0.65 : 0.5, 16, 12]} />
+      <meshBasicMaterial color={selected ? "#9b6200" : "#151515"} depthTest={false} depthWrite={false} transparent />
     </mesh>
     {(showLabels && (hovered || selected)) && <Html position={[0, 0.65, 0]} center zIndexRange={[1, 5]}>
       <div className={`scene-label ${selected ? 'is-selected' : ''}`}><span className="scene-label-dot" /><span><strong>Device {displaySession(position.sessionId)}</strong><small>{Math.round(position.confidence * 100)}% confidence · {position.accuracyRadiusM.toFixed(1)} m radius</small></span></div>
@@ -107,16 +110,20 @@ function CameraController({ preset, selected, cameraRequest, config, buildingVie
     void cameraRequest
     const { widthM, depthM } = roomDimensions(config)
     const span = Math.max(widthM, depthM)
-    if (preset === 'top') return new THREE.Vector3(0, span * (buildingView === 'all' ? 2.35 : 1.8), 0.01)
+    const halfFov = 42 * Math.PI / 360
+    const limitingAngle = Math.min(halfFov, Math.atan(Math.tan(halfFov) * size.width / Math.max(1, size.height)))
+    const radius = Math.hypot(widthM, depthM, buildingView === 'all' ? PHOTO_ROOM_ASSET.nativeHeightM : 5) / 2
+    const distance = radius / Math.sin(limitingAngle) * 1.15
+    if (preset === 'top') return new THREE.Vector3(0, distance, 0.01)
     if (preset === 'focus' && selectedRef.current) {
       const point = mapToRoomAsset(selectedRef.current, config, 0)
       return new THREE.Vector3(point.x + span * 0.28, span * 0.38, point.z + span * 0.28)
     }
-    return new THREE.Vector3(span * 0.82, span * (buildingView === 'all' ? 0.95 : 0.72), span * 0.82)
+    return new THREE.Vector3(0.82, buildingView === 'all' ? 0.95 : 0.9, 0.82).normalize().multiplyScalar(distance)
   // Selection coordinates are sampled only when an explicit camera request is
   // made. Telemetry ticks replace the selected object every 700 ms; they must
   // not reassert a preset or override a user's orbit.
-  }, [buildingView, config, preset, cameraRequest])
+  }, [buildingView, config, preset, cameraRequest, size.width, size.height])
   const lookTarget = useMemo(() => {
     void cameraRequest
     if (preset === 'focus' && selectedRef.current) { const point = mapToRoomAsset(selectedRef.current, config, 0); return new THREE.Vector3(point.x, 0, point.z) }
@@ -133,11 +140,15 @@ function CameraController({ preset, selected, cameraRequest, config, buildingVie
     if (camera instanceof THREE.OrthographicCamera) {
       camera.zoom = preset === 'focus' ? focusZoom : preset === 'top' ? topZoom : overviewZoom
     } else if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = preset === 'focus' ? 34 : preset === 'top' ? 48 : 42
+      camera.fov = preset === 'focus' ? 34 : 42
     }
     camera.updateProjectionMatrix()
-    transitionActive.current = true
-  }, [camera, cameraRequest, config, destination, preset, size.height, size.width])
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      camera.position.copy(destination)
+      controls.current?.target.copy(lookTarget)
+      transitionActive.current = false
+    } else transitionActive.current = true
+  }, [camera, cameraRequest, config, destination, lookTarget, preset, size.height, size.width])
   useFrame((_state, delta) => {
     if (!transitionActive.current) return
     const amount = Math.min(1, delta * 5.5)
@@ -148,39 +159,87 @@ function CameraController({ preset, selected, cameraRequest, config, buildingVie
   return <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.08} minZoom={1} maxZoom={60} minPolarAngle={0.18} maxPolarAngle={Math.PI / 2.01} onStart={() => { transitionActive.current = false }} />
 }
 
-function WalkthroughController({ config }: { config: RoomModelConfig }) {
-  const { camera } = useThree()
-  const controls = useRef<FirstPersonControlsImpl>(null)
-  const dimensions = roomDimensions(config)
+function WalkthroughController({ config, onExit, readout }: { config: RoomModelConfig; onExit: () => void; readout: RefObject<HTMLOutputElement> }) {
+  const { camera, gl } = useThree()
+  const keys = useRef(new Set<string>())
+  const taps = useRef(new Set<string>())
+  const angles = useRef({ yaw: config.yawDeg * Math.PI / 180, pitch: 0 })
+  const direction = useMemo(() => new THREE.Vector3(), [])
+  const orientation = useMemo(() => new THREE.Euler(0, 0, 0, 'YXZ'), [])
+  const elapsed = useRef(0)
+  const exitRef = useRef(onExit)
+  exitRef.current = onExit
   useEffect(() => {
-    // Start in the central circulation band, facing toward the north classrooms,
-    // so the first walkthrough frame opens onto the floor instead of a wall.
-    const start = mapToRoomAsset({ xM: dimensions.widthM * 0.5, yM: dimensions.depthM * 0.58 }, config, 1.7)
+    const start = mapToRoomAsset(walkthroughStart(config), config, 1.7)
     camera.position.set(start.x, start.y, start.z)
-    camera.lookAt(start.x, start.y, start.z - 1)
+    angles.current = { yaw: config.yawDeg * Math.PI / 180, pitch: 0 }
+    if (camera instanceof THREE.PerspectiveCamera) camera.fov = 65
     camera.updateProjectionMatrix()
-    controls.current?.handleResize()
-  }, [camera, config, dimensions.depthM, dimensions.widthM])
-  useFrame((_state, delta) => {
-    const controller = controls.current
-    if (!controller) return
-    controller.update(delta)
-    const mapPoint = roomAssetToMap({ x: camera.position.x, y: camera.position.y, z: camera.position.z }, config)
-    if (!isWalkablePoint(mapPoint.xM, mapPoint.yM, config)) {
-      const clamped = {
-        xM: Math.max(dimensions.widthM * 0.04, Math.min(dimensions.widthM * 0.96, mapPoint.xM)),
-        yM: Math.max(dimensions.depthM * 0.04, Math.min(dimensions.depthM * 0.96, mapPoint.yM)),
-      }
-      const safe = mapToRoomAsset(clamped, config, 1.7)
-      camera.position.set(safe.x, safe.y, safe.z)
-    } else {
-      camera.position.y = 1.7
+    const canvas = gl.domElement
+    canvas.tabIndex = 0
+    canvas.setAttribute('aria-label', 'Walkthrough: WASD to move, drag to look, arrow keys to turn, Escape to exit')
+    canvas.focus({ preventScroll: true })
+    let dragging = false
+    const down = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); exitRef.current(); return }
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) { event.preventDefault(); keys.current.add(event.code); taps.current.add(event.code) }
+    }
+    const up = (event: KeyboardEvent) => keys.current.delete(event.code)
+    const clear = () => { keys.current.clear(); taps.current.clear(); dragging = false }
+    const pointerDown = (event: PointerEvent) => { if (event.button !== 0) return; canvas.focus(); dragging = true; canvas.setPointerCapture(event.pointerId) }
+    const pointerUp = () => { dragging = false }
+    const move = (event: PointerEvent) => {
+      if (!dragging) return
+      angles.current.yaw -= event.movementX * 0.004
+      angles.current.pitch = Math.max(-1.2, Math.min(1.2, angles.current.pitch - event.movementY * 0.004))
+    }
+    canvas.addEventListener('keydown', down)
+    canvas.addEventListener('keyup', up)
+    canvas.addEventListener('blur', clear)
+    window.addEventListener('blur', clear)
+    canvas.addEventListener('pointerdown', pointerDown)
+    canvas.addEventListener('pointerup', pointerUp)
+    canvas.addEventListener('pointercancel', clear)
+    canvas.addEventListener('pointermove', move)
+    return () => {
+      clear()
+      canvas.removeEventListener('keydown', down)
+      canvas.removeEventListener('keyup', up)
+      canvas.removeEventListener('blur', clear)
+      window.removeEventListener('blur', clear)
+      canvas.removeEventListener('pointerdown', pointerDown)
+      canvas.removeEventListener('pointerup', pointerUp)
+      canvas.removeEventListener('pointercancel', clear)
+      canvas.removeEventListener('pointermove', move)
+      canvas.removeAttribute('tabindex')
+      canvas.removeAttribute('aria-label')
+    }
+  }, [camera, config, gl])
+  useFrame((_state, frameDelta) => {
+    const delta = Math.min(frameDelta, 0.05)
+    const has = (code: string) => keys.current.has(code) || taps.current.has(code)
+    angles.current.yaw += (Number(has('ArrowLeft')) - Number(has('ArrowRight'))) * delta * 1.5
+    angles.current.pitch = Math.max(-1.2, Math.min(1.2, angles.current.pitch + (Number(has('ArrowUp')) - Number(has('ArrowDown'))) * delta))
+    orientation.set(angles.current.pitch, angles.current.yaw, 0)
+    camera.quaternion.setFromEuler(orientation)
+    const forward = Number(has('KeyW')) - Number(has('KeyS'))
+    const right = Number(has('KeyD')) - Number(has('KeyA'))
+    taps.current.clear()
+    direction.set(right, 0, -forward).normalize().applyAxisAngle(THREE.Object3D.DEFAULT_UP, angles.current.yaw).multiplyScalar(delta * 4.2)
+    const from = roomAssetToMap(camera.position, config)
+    const to = roomAssetToMap({ x: camera.position.x + direction.x, y: 1.7, z: camera.position.z + direction.z }, config)
+    const safe = mapToRoomAsset(moveWithinFloor(from, to, config), config, 1.7)
+    camera.position.set(safe.x, safe.y, safe.z)
+    elapsed.current += delta
+    if (elapsed.current > 0.15 && readout.current) {
+      readout.current.textContent = `Camera: ${from.xM.toFixed(1)}, ${from.yM.toFixed(1)} m · eye height 1.7 m`
+      elapsed.current = 0
     }
   })
-  return <FirstPersonControls ref={controls} movementSpeed={4.2} lookSpeed={0.08} lookVertical activeLook />
+  return null
 }
 
-function FloorScene({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels, showConfidence, showZones, cameraPreset, cameraRequest, buildingView, walkthrough }: MapCanvasProps) {
+function FloorScene({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels, showConfidence, showZones, cameraPreset, cameraRequest, buildingView, walkthrough, onExitWalkthrough, readout }: MapCanvasProps & { readout: RefObject<HTMLOutputElement> }) {
   const selected = state.positions.find((position) => position.sessionId === selectedId)
   const nodes = new Map(state.nodes.map((node) => [node.anchorId, node]))
   return <>
@@ -189,18 +248,18 @@ function FloorScene({ state, roomConfig, selectedId, onSelect, showEntities, sho
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]} receiveShadow><planeGeometry args={[110, 75]} /><meshStandardMaterial color="#e7ecea" roughness={1} /></mesh>
     <PhotoRoom roomConfig={roomConfig} showAllFloors={buildingView === 'all'} />
     <ZoneOverlay config={roomConfig} visible={showZones} />
-    {showAnchors && roomConfig.anchors.map((anchor) => <AnchorMarker key={anchor.anchorId} anchor={anchor} node={nodes.get(anchor.anchorId)} showLabels={showLabels} config={roomConfig} onSelect={() => onSelect(anchor.anchorId)} />)}
-    {showEntities && state.positions.map((position) => <EntityMarker key={position.sessionId} position={position} selected={selectedId === position.sessionId} showConfidence={showConfidence} showLabels={showLabels} config={roomConfig} onSelect={() => onSelect(position.sessionId)} />)}
-    {walkthrough ? <WalkthroughController config={roomConfig} /> : <CameraController preset={cameraPreset} selected={selected} cameraRequest={cameraRequest} config={roomConfig} buildingView={buildingView} />}
+    {showAnchors && roomConfig.anchors.map((anchor) => <AnchorMarker key={anchor.anchorId} anchor={anchor} node={nodes.get(anchor.anchorId)} showLabels={showLabels} config={roomConfig} onSelect={() => { if (!walkthrough) onSelect(anchor.anchorId) }} />)}
+    {showEntities && state.positions.map((position) => <EntityMarker key={position.sessionId} position={position} selected={selectedId === position.sessionId} showConfidence={showConfidence} showLabels={showLabels} config={roomConfig} onSelect={() => { if (!walkthrough) onSelect(position.sessionId) }} />)}
+    {walkthrough ? <WalkthroughController config={roomConfig} readout={readout} onExit={onExitWalkthrough} /> : <CameraController preset={cameraPreset} selected={selected} cameraRequest={cameraRequest} config={roomConfig} buildingView={buildingView} />}
   </>
 }
 
 function FloorFallback({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels, buildingView }: Pick<MapCanvasProps, 'state' | 'roomConfig' | 'selectedId' | 'onSelect' | 'showEntities' | 'showAnchors' | 'showLabels' | 'buildingView'>) {
   const { widthM, depthM } = roomDimensions(roomConfig)
-  const point = (xM: number, yM: number) => ({ left: `${Math.max(2, Math.min(98, xM / widthM * 100))}%`, top: `${Math.max(2, Math.min(98, (1 - yM / depthM) * 100))}%` })
+  const point = (xM: number, yM: number) => ({ left: `${Math.max(2, Math.min(98, (xM - roomConfig.originXM) / widthM * 100))}%`, top: `${Math.max(2, Math.min(98, (1 - (yM - roomConfig.originYM) / depthM) * 100))}%` })
   return <div className="room-dom-fallback" aria-label={buildingView === 'all' ? 'Full building preview' : 'Static floor plan preview'}>
     <div className={`floor-plan-fallback ${buildingView === 'all' ? 'is-building-overview' : ''}`}>
-      <div className="floor-plan-heading"><strong>{buildingView === 'all' ? 'VT ACB · Full building' : 'VT ACB · Floor 1'}</strong><span>Static preview · WebGL unavailable</span></div>
+      <div className="floor-plan-heading"><strong>{buildingView === 'all' ? 'VT ACB · Full building' : 'VT ACB · Floor 1'}</strong><span>2D floor preview · estimated geometry</span></div>
       {buildingView === 'all' && <div className="building-story-stack"><span>Floor 3</span><span>Floor 2</span><span>Floor 1 · tracked telemetry</span></div>}
       <div className="floor-plan-corridor" />
       <div className="floor-plan-room room-north"><span>North classrooms</span></div>
@@ -216,14 +275,14 @@ function FloorFallback({ state, roomConfig, selectedId, onSelect, showEntities, 
 
 export function MapCanvas(props: MapCanvasProps) {
   const [webglReady, setWebglReady] = useState(false)
+  const readout = useRef<HTMLOutputElement>(null)
   return <div className={`map-canvas ${props.walkthrough ? 'is-walkthrough' : ''}`} aria-label={props.walkthrough ? 'First-person Virginia Tech building walkthrough' : 'Interactive Virginia Tech building map'}>
-    {!webglReady && <FloorFallback {...props} />}
-    <Canvas onCreated={({ gl }) => setWebglReady(Boolean(gl.getContext?.()?.drawingBufferWidth))} shadows fallback={null} camera={{ position: [65, 58, 65], fov: 42, near: 0.1, far: 500 }} gl={{ antialias: true }}>
-      <Suspense fallback={<Html center><div className="model-loading">Loading Virginia Tech floor…</div></Html>}><FloorScene {...props} /></Suspense>
-    </Canvas>
-    {props.walkthrough && <div className="walkthrough-hud"><strong>Walkthrough mode</strong><span>Click the map, look around, and move with W A S D. Stay inside the modeled floor. Press the Walkthrough button to exit.</span></div>}
-    <div className="map-scale" aria-hidden="true"><span>0</span><i /><span>1</span><i /><span>2 m</span></div>
-    <div className="north-marker" aria-label="North orientation"><span>N</span><b /></div>
+    {(!webglReady || props.staticPreview) && <FloorFallback {...props} />}
+    {!props.staticPreview && <Canvas onCreated={({ gl }) => setWebglReady(Boolean(gl.getContext?.()?.drawingBufferWidth))} shadows fallback={null} camera={{ position: [65, 58, 65], fov: 42, near: 0.1, far: 2000 }} gl={{ antialias: true }}>
+      <Suspense fallback={<Html center><div className="model-loading">Loading Virginia Tech floor…</div></Html>}><FloorScene {...props} readout={readout} /></Suspense>
+    </Canvas>}
+    {props.walkthrough && !props.staticPreview && webglReady && <div className="walkthrough-hud"><strong>Walkthrough mode</strong><span>W A S D to move · drag to look · arrow keys to turn · Escape to exit. Movement stays inside an approximate floor envelope.</span><output ref={readout} aria-live="off" /></div>}
+    {(!webglReady || props.staticPreview) && <div className="map-fallback-note" role="status">{props.staticPreview ? '2D preview selected. Choose 3D map to use camera controls.' : 'Loading 3D. If WebGL is unavailable, use this selectable floor preview.'}</div>}
   </div>
 }
 

@@ -67,7 +67,7 @@ export const zoneNames: Record<string, string> = {
 export function routeForConfig(sessionId: string, config: RoomModelConfig): Array<[number, number]> {
   const route = simulationRoutes[sessionId] ?? []
   const dimensions = roomDimensions(config)
-  return route.map(([xM, yM]) => [xM * dimensions.widthM / referenceDimensions.widthM, yM * dimensions.depthM / referenceDimensions.depthM])
+  return route.map(([xM, yM]) => [config.originXM + xM * dimensions.widthM / referenceDimensions.widthM, config.originYM + yM * dimensions.depthM / referenceDimensions.depthM])
 }
 
 interface WalkableRegion { minX: number; maxX: number; minY: number; maxY: number }
@@ -100,6 +100,8 @@ const inRegion = (x: number, y: number, region: WalkableRegion): boolean => x >=
 
 export function isWalkablePoint(xM: number, yM: number, config: RoomModelConfig, zoneId?: string): boolean {
   const { widthM, depthM } = roomDimensions(config)
+  xM -= config.originXM
+  yM -= config.originYM
   if (xM < 0 || xM > widthM || yM < 0 || yM > depthM) return false
   const normalizedX = xM / widthM
   const normalizedY = yM / depthM

@@ -65,7 +65,7 @@ export function validateRoomConfig(config: RoomModelConfig): string[] {
     if (ids.has(anchor.anchorId)) errors.push(`Anchor ID ${anchor.anchorId} is duplicated.`)
     ids.add(anchor.anchorId)
     if (![anchor.xM, anchor.yM].every(Number.isFinite)) errors.push(`${anchor.label || anchor.anchorId} needs finite coordinates.`)
-    else if (anchor.xM < 0 || anchor.xM > dimensions.widthM || anchor.yM < 0 || anchor.yM > dimensions.depthM) errors.push(`${anchor.label || anchor.anchorId} is outside the calibrated floor.`)
+    else if (anchor.xM < config.originXM || anchor.xM > config.originXM + dimensions.widthM || anchor.yM < config.originYM || anchor.yM > config.originYM + dimensions.depthM) errors.push(`${anchor.label || anchor.anchorId} is outside the calibrated floor.`)
   }
   return errors
 }

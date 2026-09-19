@@ -1,3 +1,4 @@
+import { zoneNames } from './simulation'
 import type { AnchorDefinition } from './floorDefinition'
 import type { NormalizedState, NodeHeartbeat, PositionEstimate, SpatialEvent } from './types'
 import type { RoomModelConfig } from './roomModel'
@@ -23,8 +24,6 @@ export interface WorkspaceDevice {
   type: 'Tracked device'
   status: WorkspaceDeviceStatus
   lastSeen: string
-  battery: number
-  signal: 'Strong' | 'Good' | 'Weak'
   spaceId: string
   spaceName: string
   tags: string[]
@@ -78,6 +77,15 @@ const spaceCatalog: Array<Omit<WorkspaceSpace, 'occupancy' | 'status'>> = [
 const deviceLabel = (sessionId: string): string => sessionId.replace(/^session-/, '').slice(0, 4).toUpperCase()
 const formatTimestamp = (timestamp: string): string => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(timestamp))
 
+export const eventReviewKey = (event: SpatialEvent): string => JSON.stringify([event.mode, event.runId, event.deploymentId, event.buildingId, event.floorId, event.eventId, event.occurredAt])
+
+/** Freshness is relative to the snapshot, so pausing simulation preserves health. */
+export function deviceHealth(position: PositionEstimate, generatedAt: string): WorkspaceDeviceStatus {
+  const age = Date.parse(generatedAt) - Date.parse(position.calculatedAt)
+  if (!Number.isFinite(age) || age > 30_000) return 'offline'
+  return position.isOutsideMap || position.confidence < 0.72 ? 'degraded' : 'online'
+}
+
 function eventDetails(event: SpatialEvent, device: WorkspaceDevice | undefined, space: WorkspaceSpace): Pick<WorkspaceEvent, 'title' | 'severity' | 'description'> {
   if (event.eventType === 'SESSION_STARTED') return { title: 'Device session started', severity: 'info', description: `${device?.id ?? event.sessionId ?? 'Anonymous device'} started a positioning session in ${space.name}.` }
   if (event.eventType.includes('ZONE')) return { title: 'Device moved between spaces', severity: 'info', description: `${device?.id ?? 'Anonymous device'} moved through ${space.name}.` }
@@ -85,34 +93,33 @@ function eventDetails(event: SpatialEvent, device: WorkspaceDevice | undefined, 
   return { title: event.eventType.replaceAll('_', ' ').toLowerCase().replace(/(^|\s)\S/g, (letter) => letter.toUpperCase()), severity: event.confidence !== undefined && event.confidence < 0.6 ? 'warning' : 'info', description: `The positioning pipeline reported an update for ${space.name}.` }
 }
 
-export function buildWorkspace(snapshot: NormalizedState, roomConfig: RoomModelConfig): WorkspaceModel {
-  const baseSpaces = spaceCatalog.map((space) => ({ ...space, occupancy: snapshot.positions.filter((position) => position.zoneId === space.zoneId).length, status: 'available' as WorkspaceSpaceStatus }))
+export function buildWorkspace(snapshot: NormalizedState, roomConfig: RoomModelConfig, resolved: ReadonlySet<string> = new Set()): WorkspaceModel {
+  const baseSpaces = spaceCatalog.map((space) => ({ ...space, name: zoneNames[space.zoneId] ?? space.name, occupancy: snapshot.positions.filter((position) => position.zoneId === space.zoneId).length, status: 'available' as WorkspaceSpaceStatus }))
   const spaces: WorkspaceSpace[] = baseSpaces.map((space) => ({ ...space, status: (space.occupancy > space.capacity ? 'attention' : space.occupancy > space.capacity * 0.72 ? 'occupied' : 'available') as WorkspaceSpaceStatus }))
   const spaceMap = new Map(spaces.map((space) => [space.zoneId, space]))
-  const devices = snapshot.positions.map((position, index): WorkspaceDevice => {
-    const space = spaceMap.get(position.zoneId ?? '') ?? spaces[0]
-    const status: WorkspaceDeviceStatus = index === snapshot.positions.length - 1 ? 'offline' : position.confidence < 0.72 || index % 9 === 7 ? 'degraded' : 'online'
-    const signal: WorkspaceDevice['signal'] = position.confidence >= 0.84 ? 'Strong' : position.confidence >= 0.72 ? 'Good' : 'Weak'
+  const devices = snapshot.positions.map((position): WorkspaceDevice => {
+    const space = spaceMap.get(position.zoneId ?? '') ?? { id: 'unassigned', name: position.zoneId ?? 'Unassigned', type: 'Unmapped zone' }
+    const status = deviceHealth(position, snapshot.generatedAt)
     return {
       id: deviceLabel(position.sessionId), sessionId: position.sessionId, type: 'Tracked device', status,
-      lastSeen: formatTimestamp(position.calculatedAt), battery: Math.max(12, 96 - ((index * 7) % 84)), signal,
+      lastSeen: formatTimestamp(position.calculatedAt),
       spaceId: space.id, spaceName: space.name, tags: [space.type, position.mode === 'SIMULATION' ? 'Simulation' : 'Live position'],
       xM: position.xM, yM: position.yM, confidence: position.confidence, accuracyRadiusM: position.accuracyRadiusM, position,
     }
   })
   const deviceMap = new Map(devices.map((device) => [device.sessionId, device]))
   const anchors = roomConfig.anchors.map((anchor) => ({ anchor, node: snapshot.nodes.find((node) => node.anchorId === anchor.anchorId) }))
-  const events = snapshot.recentEvents.map((event, index): WorkspaceEvent => {
+  const events = snapshot.recentEvents.map((event): WorkspaceEvent => {
     const device = event.sessionId ? deviceMap.get(event.sessionId) : undefined
-    const space = spaceMap.get(event.zoneId ?? device?.position.zoneId ?? '') ?? spaces[0]
+    const space = spaceMap.get(event.toZoneId ?? event.zoneId ?? '') ?? { ...spaces[0], id: 'unassigned', name: 'Unassigned' }
     const details = eventDetails(event, device, space)
-    return { id: event.eventId, ...details, severity: device?.status === 'degraded' ? 'warning' : details.severity, status: index === 0 ? 'active' : 'resolved', sourceId: device?.id ?? event.sessionId ?? 'SYSTEM', sourceLabel: device?.id ?? event.sessionId ?? 'System', spaceId: space.id, spaceName: space.name, occurredAt: formatTimestamp(event.occurredAt), event }
+    return { id: event.eventId, ...details, severity: details.severity, status: resolved.has(eventReviewKey(event)) ? 'resolved' : 'active', sourceId: device?.id ?? event.sessionId ?? 'SYSTEM', sourceLabel: device?.id ?? event.sessionId ?? 'System', spaceId: space.id, spaceName: space.name, occurredAt: formatTimestamp(event.occurredAt), event }
   })
   const averageConfidence = devices.length ? devices.reduce((sum, device) => sum + device.confidence, 0) / devices.length : 0
   return {
     devices, anchors, spaces, events, onlineDevices: devices.filter((device) => device.status === 'online').length,
     degradedDevices: devices.filter((device) => device.status === 'degraded').length,
     offlineDevices: devices.filter((device) => device.status === 'offline').length,
-    averageConfidence, eventsLastHour: events.length,
+    averageConfidence, eventsLastHour: snapshot.counts.eventsLastHour,
   }
 }

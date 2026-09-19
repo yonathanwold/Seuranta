@@ -180,3 +180,30 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   .topbar { padding: 0 10px; }
   .floor-plan-fallback { width: 90%; }
 }
+
+/* Leave room for the building and keep controls clear of the scene. */
+.camera-toolbar { right: 14px; left: 14px; flex-wrap: wrap; width: fit-content; max-width: calc(100% - 28px); }
+.camera-toolbar button { white-space: nowrap; }
+.map-canvas { top: 64px; bottom: 58px; }
+.map-help { bottom: 10px; left: 14px; }
+.map-legend { bottom: 29px; right: 14px; }
+.walkthrough-hud { top: 8px; left: 14px; max-width: 310px; }
+.map-fallback-note { position: absolute; bottom: 0; left: 12px; right: 12px; padding: 8px; background: #fff; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.toggle-row input:focus-visible + i { outline: 2px solid var(--ink); outline-offset: 3px; }
+.ops-table-scroll:focus-visible, canvas:focus-visible { outline: 2px solid var(--warn); outline-offset: -3px; }
+@media (max-width: 1500px) and (min-width: 951px) {
+  .app-shell { grid-template-columns: 180px minmax(0, 1fr); }
+  .main-grid { grid-template-columns: 200px minmax(0, 1fr) 280px; }
+  .brand-logo { width: 140px; }
+  .top-metrics > div { min-width: 82px; }
+  .context-name { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+html { overflow: hidden; }
+.status-callout { text-transform: capitalize; }
+.app-shell { position: fixed; inset: 0; height: 100dvh; }
+.floor-plan-fallback, .floor-plan-heading, .floor-plan-room span, .floor-plan-note { transform: none; }
+.floor-plan-heading { top: -36px; flex-wrap: wrap; gap: 4px 10px; }
+.floor-plan-heading span, .floor-plan-note { color: #666; }

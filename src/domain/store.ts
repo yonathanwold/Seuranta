@@ -19,7 +19,7 @@ interface AtlasStore {
   toggleLayer: (key: 'showEntities' | 'showAnchors' | 'showLabels' | 'showConfidence' | 'showZones') => void
 }
 
-const emptyState: NormalizedState = { stateRevision: 0, generatedAt: new Date().toISOString(), deploymentId: '', buildingId: 'riverside-office', floorId: 'floor-2', runId: '', mode: 'SIMULATION', counts: { activeSessions: 0, anchorsOnline: 0, anchorsDegraded: 0, eventsLastHour: 0 }, positions: [], nodes: [], zones: [], recentEvents: [], isPartial: true }
+const emptyState: NormalizedState = { stateRevision: 0, generatedAt: new Date().toISOString(), deploymentId: '', buildingId: 'vt-academic-classroom-building', floorId: 'floor-1', runId: '', mode: 'SIMULATION', counts: { activeSessions: 0, anchorsOnline: 0, anchorsDegraded: 0, eventsLastHour: 0 }, positions: [], nodes: [], zones: [], recentEvents: [], isPartial: true }
 
 export const useAtlasStore = create<AtlasStore>((set) => ({
   mode: 'SIMULATION', snapshot: emptyState, providerStatus: 'connecting', selectedId: 'session-a7f3', search: '', showEntities: true, showAnchors: true, showLabels: true, showConfidence: true, showZones: true,

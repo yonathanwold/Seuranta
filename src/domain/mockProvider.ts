@@ -58,7 +58,6 @@ export class MockPositionProvider implements PositionProvider {
 
   setScenario(scenario: SimulationScenario): void {
     this.controls.scenario = scenario
-    this.events = []
     this.revision += 1
     this.emit()
   }
@@ -91,14 +90,14 @@ export class MockPositionProvider implements PositionProvider {
       const phase = ((this.tick * 0.009 + index * 0.24) % 1)
       const [xM, yM] = interpolate(route, phase)
       const weakSignal = this.controls.scenario === 'weak-signal' && index === 1
-      const confidence = Math.max(0.68, (weakSignal ? 0.74 : 0.94) - index * 0.012)
+      const confidence = Math.max(0.68, (weakSignal ? 0.68 : 0.94) - index * 0.012)
       const accuracyRadiusM = weakSignal ? 1.25 : 0.45 + (index % 6) * 0.06
       return {
         schemaVersion: '1.0', positionId: `${sessionId}-${this.tick}`, calculatedAt: generatedAt, windowStart: generatedAt, windowEnd: generatedAt,
         runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId, sessionId,
         rawXM: xM + Math.sin(this.tick * 0.1 + index) * 0.14, rawYM: yM + Math.cos(this.tick * 0.11 + index) * 0.14, xM, yM, zoneId: sessionZones[sessionId],
         confidence, accuracyRadiusM, positionMethod: 'demo-route', smoothingMethod: 'EMA', anchorsUsed: this.roomConfig.anchors.slice(0, index === 1 ? 2 : 4).map((anchor) => anchor.anchorId), observationCount: 8 + index,
-        mode: 'SIMULATION', sequenceNumber: this.tick, isOutsideMap: xM < 0 || xM > dimensions.widthM || yM < 0 || yM > dimensions.depthM,
+        mode: 'SIMULATION', sequenceNumber: this.tick, isOutsideMap: xM < this.roomConfig.originXM || xM > this.roomConfig.originXM + dimensions.widthM || yM < this.roomConfig.originYM || yM > this.roomConfig.originYM + dimensions.depthM,
       }
     })
     if ((this.tick === 0 || this.tick === 1) && this.events.length === 0) {
@@ -108,7 +107,7 @@ export class MockPositionProvider implements PositionProvider {
         mode: 'SIMULATION' as const, sessionId: position.sessionId, zoneId: position.zoneId ?? undefined, toZoneId: position.zoneId ?? undefined, eventSequence: index + 1, confidence: position.confidence, metadata: { source: 'simulation' },
       }))
     }
-    const weakAnchor = this.controls.scenario === 'weak-signal' ? 'vt-acb-02' : undefined
+    const weakAnchor = this.controls.scenario === 'weak-signal' ? this.roomConfig.anchors[1]?.anchorId : undefined
     const nodes: NodeHeartbeat[] = this.roomConfig.anchors.map((anchor, index) => {
       const degraded = weakAnchor === anchor.anchorId
       return {
