@@ -1,10 +1,11 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html, OrbitControls, useGLTF } from '@react-three/drei'
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+import { FirstPersonControls, Html, OrbitControls, useGLTF } from '@react-three/drei'
+import type { FirstPersonControls as FirstPersonControlsImpl, OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { PHOTO_ROOM_ASSET, roomAssetScaleXY, roomDimensions, type RoomModelConfig } from '../domain/roomModel'
-import { mapToRoomAsset } from '../domain/coordinates'
+import { mapToRoomAsset, roomAssetToMap } from '../domain/coordinates'
+import { isWalkablePoint } from '../domain/simulation'
 import type { NodeHeartbeat, NormalizedState, PositionEstimate } from '../domain/types'
 
 interface MapCanvasProps {
@@ -19,27 +20,27 @@ interface MapCanvasProps {
   showZones: boolean
   cameraPreset: 'overview' | 'top' | 'focus'
   cameraRequest: number
+  buildingView: 'all' | 'floor-1'
+  walkthrough: boolean
 }
 
 const statusColor: Record<NodeHeartbeat['status'], string> = { online: '#12a772', degraded: '#a76212', offline: '#b94747' }
 const displaySession = (sessionId: string) => sessionId.replace(/^session-/, '').slice(0, 4).toUpperCase()
 
-function PhotoRoom({ roomConfig }: { roomConfig: RoomModelConfig }) {
+function PhotoRoom({ roomConfig, showAllFloors }: { roomConfig: RoomModelConfig; showAllFloors: boolean }) {
   const { scene } = useGLTF(PHOTO_ROOM_ASSET.path)
-  const model = useMemo(() => scene.clone(true), [scene])
-  const scale = roomAssetScaleXY(roomConfig)
-  useEffect(() => {
-    model.visible = true
-    // The operational view represents the first floor. Keep the supplied
-    // upper stories in the source asset, but remove them from this scene.
-    for (const hiddenGroup of ['Floor_02', 'Floor_03', 'Roof']) model.getObjectByName(hiddenGroup)?.removeFromParent()
-    model.traverse((object) => {
+  const model = useMemo(() => {
+    const clone = scene.clone(true)
+    if (!showAllFloors) for (const hiddenGroup of ['Floor_02', 'Floor_03', 'Roof']) clone.getObjectByName(hiddenGroup)?.removeFromParent()
+    clone.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return
       object.castShadow = true
       object.receiveShadow = true
       object.frustumCulled = true
     })
-  }, [model])
+    return clone
+  }, [scene, showAllFloors])
+  const scale = roomAssetScaleXY(roomConfig)
   return <primitive object={model} scale={[scale.x, 1, scale.z]} rotation={[0, roomConfig.yawDeg * Math.PI / 180, 0]} />
 }
 
@@ -96,7 +97,7 @@ function EntityMarker({ position, selected, showConfidence, showLabels, onSelect
   </group>
 }
 
-function CameraController({ preset, selected, cameraRequest, config }: { preset: MapCanvasProps['cameraPreset']; selected?: PositionEstimate; cameraRequest: number; config: RoomModelConfig }) {
+function CameraController({ preset, selected, cameraRequest, config, buildingView }: { preset: MapCanvasProps['cameraPreset']; selected?: PositionEstimate; cameraRequest: number; config: RoomModelConfig; buildingView: MapCanvasProps['buildingView'] }) {
   const { camera, size } = useThree()
   const controls = useRef<OrbitControlsImpl>(null)
   const transitionActive = useRef(false)
@@ -106,16 +107,16 @@ function CameraController({ preset, selected, cameraRequest, config }: { preset:
     void cameraRequest
     const { widthM, depthM } = roomDimensions(config)
     const span = Math.max(widthM, depthM)
-    if (preset === 'top') return new THREE.Vector3(0, span * 1.8, 0.01)
+    if (preset === 'top') return new THREE.Vector3(0, span * (buildingView === 'all' ? 2.35 : 1.8), 0.01)
     if (preset === 'focus' && selectedRef.current) {
       const point = mapToRoomAsset(selectedRef.current, config, 0)
       return new THREE.Vector3(point.x + span * 0.28, span * 0.38, point.z + span * 0.28)
     }
-    return new THREE.Vector3(span * 0.82, span * 0.72, span * 0.82)
+    return new THREE.Vector3(span * 0.82, span * (buildingView === 'all' ? 0.95 : 0.72), span * 0.82)
   // Selection coordinates are sampled only when an explicit camera request is
   // made. Telemetry ticks replace the selected object every 700 ms; they must
   // not reassert a preset or override a user's orbit.
-  }, [config, preset, cameraRequest])
+  }, [buildingView, config, preset, cameraRequest])
   const lookTarget = useMemo(() => {
     void cameraRequest
     if (preset === 'focus' && selectedRef.current) { const point = mapToRoomAsset(selectedRef.current, config, 0); return new THREE.Vector3(point.x, 0, point.z) }
@@ -129,7 +130,11 @@ function CameraController({ preset, selected, cameraRequest, config }: { preset:
     const overviewZoom = Math.min(size.width / Math.max(1, widthM * 1.42), size.height / Math.max(1, depthM * 1.85))
     const topZoom = Math.min(size.width / Math.max(1, widthM * 1.18), size.height / Math.max(1, depthM * 1.22))
     const focusZoom = Math.min(60, size.width / Math.max(1.8, span * 0.48))
-    camera.zoom = preset === 'focus' ? focusZoom : preset === 'top' ? topZoom : overviewZoom
+    if (camera instanceof THREE.OrthographicCamera) {
+      camera.zoom = preset === 'focus' ? focusZoom : preset === 'top' ? topZoom : overviewZoom
+    } else if (camera instanceof THREE.PerspectiveCamera) {
+      camera.fov = preset === 'focus' ? 34 : preset === 'top' ? 48 : 42
+    }
     camera.updateProjectionMatrix()
     transitionActive.current = true
   }, [camera, cameraRequest, config, destination, preset, size.height, size.width])
@@ -143,27 +148,60 @@ function CameraController({ preset, selected, cameraRequest, config }: { preset:
   return <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.08} minZoom={1} maxZoom={60} minPolarAngle={0.18} maxPolarAngle={Math.PI / 2.01} onStart={() => { transitionActive.current = false }} />
 }
 
-function FloorScene({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels, showConfidence, showZones, cameraPreset, cameraRequest }: MapCanvasProps) {
+function WalkthroughController({ config }: { config: RoomModelConfig }) {
+  const { camera } = useThree()
+  const controls = useRef<FirstPersonControlsImpl>(null)
+  const dimensions = roomDimensions(config)
+  useEffect(() => {
+    // Start in the central circulation band, facing toward the north classrooms,
+    // so the first walkthrough frame opens onto the floor instead of a wall.
+    const start = mapToRoomAsset({ xM: dimensions.widthM * 0.5, yM: dimensions.depthM * 0.58 }, config, 1.7)
+    camera.position.set(start.x, start.y, start.z)
+    camera.lookAt(start.x, start.y, start.z - 1)
+    camera.updateProjectionMatrix()
+    controls.current?.handleResize()
+  }, [camera, config, dimensions.depthM, dimensions.widthM])
+  useFrame((_state, delta) => {
+    const controller = controls.current
+    if (!controller) return
+    controller.update(delta)
+    const mapPoint = roomAssetToMap({ x: camera.position.x, y: camera.position.y, z: camera.position.z }, config)
+    if (!isWalkablePoint(mapPoint.xM, mapPoint.yM, config)) {
+      const clamped = {
+        xM: Math.max(dimensions.widthM * 0.04, Math.min(dimensions.widthM * 0.96, mapPoint.xM)),
+        yM: Math.max(dimensions.depthM * 0.04, Math.min(dimensions.depthM * 0.96, mapPoint.yM)),
+      }
+      const safe = mapToRoomAsset(clamped, config, 1.7)
+      camera.position.set(safe.x, safe.y, safe.z)
+    } else {
+      camera.position.y = 1.7
+    }
+  })
+  return <FirstPersonControls ref={controls} movementSpeed={4.2} lookSpeed={0.08} lookVertical activeLook />
+}
+
+function FloorScene({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels, showConfidence, showZones, cameraPreset, cameraRequest, buildingView, walkthrough }: MapCanvasProps) {
   const selected = state.positions.find((position) => position.sessionId === selectedId)
   const nodes = new Map(state.nodes.map((node) => [node.anchorId, node]))
   return <>
     <hemisphereLight args={['#ffffff', '#a7b6b2', 1.1]} />
     <directionalLight position={[50, 75, 50]} intensity={1.3} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-55} shadow-camera-right={55} shadow-camera-top={55} shadow-camera-bottom={-55} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]} receiveShadow><planeGeometry args={[110, 75]} /><meshStandardMaterial color="#e7ecea" roughness={1} /></mesh>
-    <PhotoRoom roomConfig={roomConfig} />
+    <PhotoRoom roomConfig={roomConfig} showAllFloors={buildingView === 'all'} />
     <ZoneOverlay config={roomConfig} visible={showZones} />
     {showAnchors && roomConfig.anchors.map((anchor) => <AnchorMarker key={anchor.anchorId} anchor={anchor} node={nodes.get(anchor.anchorId)} showLabels={showLabels} config={roomConfig} onSelect={() => onSelect(anchor.anchorId)} />)}
     {showEntities && state.positions.map((position) => <EntityMarker key={position.sessionId} position={position} selected={selectedId === position.sessionId} showConfidence={showConfidence} showLabels={showLabels} config={roomConfig} onSelect={() => onSelect(position.sessionId)} />)}
-    <CameraController preset={cameraPreset} selected={selected} cameraRequest={cameraRequest} config={roomConfig} />
+    {walkthrough ? <WalkthroughController config={roomConfig} /> : <CameraController preset={cameraPreset} selected={selected} cameraRequest={cameraRequest} config={roomConfig} buildingView={buildingView} />}
   </>
 }
 
-function FloorFallback({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels }: Pick<MapCanvasProps, 'state' | 'roomConfig' | 'selectedId' | 'onSelect' | 'showEntities' | 'showAnchors' | 'showLabels'>) {
+function FloorFallback({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels, buildingView }: Pick<MapCanvasProps, 'state' | 'roomConfig' | 'selectedId' | 'onSelect' | 'showEntities' | 'showAnchors' | 'showLabels' | 'buildingView'>) {
   const { widthM, depthM } = roomDimensions(roomConfig)
   const point = (xM: number, yM: number) => ({ left: `${Math.max(2, Math.min(98, xM / widthM * 100))}%`, top: `${Math.max(2, Math.min(98, (1 - yM / depthM) * 100))}%` })
-  return <div className="room-dom-fallback" aria-label="Static floor plan preview">
-    <div className="floor-plan-fallback">
-      <div className="floor-plan-heading"><strong>VT ACB · Floor 1</strong><span>Static preview · WebGL unavailable</span></div>
+  return <div className="room-dom-fallback" aria-label={buildingView === 'all' ? 'Full building preview' : 'Static floor plan preview'}>
+    <div className={`floor-plan-fallback ${buildingView === 'all' ? 'is-building-overview' : ''}`}>
+      <div className="floor-plan-heading"><strong>{buildingView === 'all' ? 'VT ACB · Full building' : 'VT ACB · Floor 1'}</strong><span>Static preview · WebGL unavailable</span></div>
+      {buildingView === 'all' && <div className="building-story-stack"><span>Floor 3</span><span>Floor 2</span><span>Floor 1 · tracked telemetry</span></div>}
       <div className="floor-plan-corridor" />
       <div className="floor-plan-room room-north"><span>North classrooms</span></div>
       <div className="floor-plan-room room-west"><span>West learning wing</span></div>
@@ -178,11 +216,12 @@ function FloorFallback({ state, roomConfig, selectedId, onSelect, showEntities, 
 
 export function MapCanvas(props: MapCanvasProps) {
   const [webglReady, setWebglReady] = useState(false)
-  return <div className="map-canvas" aria-label="Interactive Virginia Tech first-floor map">
+  return <div className={`map-canvas ${props.walkthrough ? 'is-walkthrough' : ''}`} aria-label={props.walkthrough ? 'First-person Virginia Tech building walkthrough' : 'Interactive Virginia Tech building map'}>
     {!webglReady && <FloorFallback {...props} />}
-    <Canvas onCreated={({ gl }) => setWebglReady(Boolean(gl.getContext?.()?.drawingBufferWidth))} shadows fallback={null} orthographic camera={{ position: [65, 58, 65], zoom: 5, near: 0.1, far: 300 }} gl={{ antialias: true }}>
+    <Canvas onCreated={({ gl }) => setWebglReady(Boolean(gl.getContext?.()?.drawingBufferWidth))} shadows fallback={null} camera={{ position: [65, 58, 65], fov: 42, near: 0.1, far: 500 }} gl={{ antialias: true }}>
       <Suspense fallback={<Html center><div className="model-loading">Loading Virginia Tech floor…</div></Html>}><FloorScene {...props} /></Suspense>
     </Canvas>
+    {props.walkthrough && <div className="walkthrough-hud"><strong>Walkthrough mode</strong><span>Click the map, look around, and move with W A S D. Stay inside the modeled floor. Press the Walkthrough button to exit.</span></div>}
     <div className="map-scale" aria-hidden="true"><span>0</span><i /><span>1</span><i /><span>2 m</span></div>
     <div className="north-marker" aria-label="North orientation"><span>N</span><b /></div>
   </div>

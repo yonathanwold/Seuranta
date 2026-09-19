@@ -91,8 +91,8 @@ export class MockPositionProvider implements PositionProvider {
       const phase = ((this.tick * 0.009 + index * 0.24) % 1)
       const [xM, yM] = interpolate(route, phase)
       const weakSignal = this.controls.scenario === 'weak-signal' && index === 1
-      const confidence = Math.max(0.42, (weakSignal ? 0.62 : 0.91) - index * 0.045)
-      const accuracyRadiusM = weakSignal ? 1.25 : 0.45 + index * 0.12
+      const confidence = Math.max(0.68, (weakSignal ? 0.74 : 0.94) - index * 0.012)
+      const accuracyRadiusM = weakSignal ? 1.25 : 0.45 + (index % 6) * 0.06
       return {
         schemaVersion: '1.0', positionId: `${sessionId}-${this.tick}`, calculatedAt: generatedAt, windowStart: generatedAt, windowEnd: generatedAt,
         runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId, sessionId,
@@ -101,7 +101,7 @@ export class MockPositionProvider implements PositionProvider {
         mode: 'SIMULATION', sequenceNumber: this.tick, isOutsideMap: xM < 0 || xM > dimensions.widthM || yM < 0 || yM > dimensions.depthM,
       }
     })
-    if (this.tick === 1 && this.events.length === 0) {
+    if ((this.tick === 0 || this.tick === 1) && this.events.length === 0) {
       this.events = positions.map((position, index) => ({
         eventId: `${position.sessionId}-started`, eventType: 'SESSION_STARTED', occurredAt: generatedAt, emittedAt: generatedAt,
         runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId,
