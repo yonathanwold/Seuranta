@@ -6,17 +6,15 @@ include:
 
 variables:
   catalog:
-    default: main
+    default: workspace
   schema:
     default: seuranta
   warehouse_id:
-    default: ""
-  workspace_host:
-    default: ""
+    default: 3b14801d90397983
 
 targets:
   dev:
     mode: development
     default: true
     workspace:
-      host: ${var.workspace_host}
+      profile: seuranta-dev
