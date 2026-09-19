@@ -1,0 +1,12 @@
+[build-system]
+requires = []
+build-backend = "setuptools.build_meta:__legacy__"
+
+[project]
+name = "seuranta-edge"
+version = "0.1.0"
+description = "Hardware-neutral Seuranta Atlas Raspberry Pi edge agent"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
