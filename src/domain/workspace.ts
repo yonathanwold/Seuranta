@@ -82,8 +82,8 @@ export const eventReviewKey = (event: SpatialEvent): string => JSON.stringify([e
 /** Freshness is relative to the snapshot, so pausing simulation preserves health. */
 export function deviceHealth(position: PositionEstimate, generatedAt: string): WorkspaceDeviceStatus {
   const age = Date.parse(generatedAt) - Date.parse(position.calculatedAt)
-  if (!Number.isFinite(age) || age > 30_000) return 'offline'
-  return position.isOutsideMap || position.confidence < 0.72 ? 'degraded' : 'online'
+  if (!Number.isFinite(age) || age >= 30_000) return 'offline'
+  return age >= 10_000 || position.isOutsideMap || position.confidence < 0.72 ? 'degraded' : 'online'
 }
 
 function eventDetails(event: SpatialEvent, device: WorkspaceDevice | undefined, space: WorkspaceSpace): Pick<WorkspaceEvent, 'title' | 'severity' | 'description'> {

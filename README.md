@@ -97,6 +97,10 @@ npm.cmd run dev
 
 Live snapshots and updates must match all four scope IDs. Old revisions, malformed messages, and cross-floor data are ignored. Switching scopes clears the old view immediately. Live mode never quietly falls back to simulation.
 
+### Consenting phone tracking
+
+The branch also includes a functional browser tracker at `/tracker/`. It requests geolocation only after the participant presses **Enable Precise Location**, sends anonymous telemetry through `WS /api/v1/tracker` (with `POST /api/v1/telemetry/location` as a fallback), and emits the existing normalized position records to `LivePositionProvider`. Start the backend with `python -m uvicorn services.api.main:app --host 0.0.0.0 --port 8000 --reload`; see [docs/live-phone-tracking.md](docs/live-phone-tracking.md) for calibration, HTTPS, QR, hotspot, dev injection, and the exact iPhone/Android test checklist.
+
 The bundled integration path is:
 
 ```text
@@ -126,6 +130,7 @@ src/
     types.ts                 normalized domain contracts
   App.tsx                    dashboard shell and interactions
   styles.css                layout and visual system
+tracker/                    mobile-first consenting browser tracker
 docs/
   frontend-architecture.md
   demo-guide.md

@@ -30,6 +30,7 @@ describe('shared workspace', () => {
     const after = buildWorkspace({ ...state, positions: [...state.positions].reverse() }, defaultRoomConfig)
     for (const device of before.devices) expect(after.devices.find((item) => item.sessionId === device.sessionId)?.status).toBe(device.status)
     const position = state.positions[0]
+    expect(deviceHealth({ ...position, calculatedAt: new Date(Date.parse(state.generatedAt) - 10_000).toISOString() }, state.generatedAt)).toBe('degraded')
     expect(deviceHealth({ ...position, calculatedAt: new Date(Date.parse(state.generatedAt) - 31_000).toISOString() }, state.generatedAt)).toBe('offline')
     expect(deviceHealth({ ...position, confidence: 0.5 }, state.generatedAt)).toBe('degraded')
   })

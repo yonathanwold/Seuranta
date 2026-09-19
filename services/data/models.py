@@ -222,6 +222,62 @@ class SessionEnd(ContractModel):
     ended_at: datetime = Field(default_factory=utc_now)
 
 
+class TrackerLocation(ContractModel):
+    """Anonymous browser geolocation packet sent by the mobile tracker."""
+
+    type: Literal["location"] = "location"
+    session_id: str = Field(min_length=1, max_length=80)
+    captured_at: datetime = Field(default_factory=utc_now)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    altitude: float | None = None
+    accuracy_m: float = Field(gt=0, le=10_000)
+    altitude_accuracy_m: float | None = Field(default=None, ge=0)
+    heading_deg: float | None = Field(default=None, ge=0, le=360)
+    speed_mps: float | None = Field(default=None, ge=0, le=1_000)
+    run_id: str | None = None
+    deployment_id: str | None = None
+    building_id: str | None = None
+    floor_id: str | None = None
+
+    @field_validator("captured_at")
+    @classmethod
+    def ensure_captured_timezone(cls, value: datetime) -> datetime:
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+class TrackerHello(ContractModel):
+    type: Literal["hello"] = "hello"
+    session_id: str = Field(min_length=1, max_length=80)
+    run_id: str | None = None
+    deployment_id: str | None = None
+    building_id: str | None = None
+    floor_id: str | None = None
+
+
+class TrackerCalibration(ContractModel):
+    type: Literal["calibrate"] = "calibrate"
+    session_id: str = Field(min_length=1, max_length=80)
+    calibration_id: str | None = None
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    run_id: str | None = None
+    deployment_id: str | None = None
+    building_id: str | None = None
+    floor_id: str | None = None
+
+
+class DevPositionRequest(ContractModel):
+    session_id: str = Field(min_length=1, max_length=80)
+    x_m: float
+    y_m: float
+    accuracy_radius_m: float = Field(default=2.0, gt=0, le=10_000)
+    run_id: str | None = None
+    deployment_id: str | None = None
+    building_id: str | None = None
+    floor_id: str | None = None
+
+
 class QueryRequest(ContractModel):
     query: str = Field(min_length=1, max_length=500)
     run_id: str

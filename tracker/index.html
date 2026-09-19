@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0b0c" />
+    <title>Seuranta · Location Session</title>
+    <link rel="stylesheet" href="/tracker/tracker.css" />
+  </head>
+  <body>
+    <main class="tracker-shell">
+      <header class="tracker-brand">
+        <div class="brand-mark">S</div>
+        <div>
+          <strong>SEURANTA</strong>
+          <span>Spatial Operations</span>
+        </div>
+      </header>
+
+      <section class="tracker-card intro-card">
+        <p class="eyebrow">Location Session</p>
+        <h1>This device can share its live position with the active Seuranta deployment.</h1>
+        <p class="muted">Only an anonymous session ID and browser-reported location accuracy are shared. Your browser will ask for precise location permission after you press the button.</p>
+        <button id="enable-button" class="primary-button">Enable Precise Location</button>
+        <p id="permission-note" class="inline-note" role="status">Location sharing is stopped until you choose to enable it.</p>
+      </section>
+
+      <section id="session-card" class="tracker-card session-card" hidden>
+        <div class="session-heading">
+          <div>
+            <p class="eyebrow">Session</p>
+            <strong id="session-short">A7F3</strong>
+          </div>
+          <div id="status-pill" class="status-pill status-stopped"><span></span><b>Stopped</b></div>
+        </div>
+        <dl class="telemetry-grid">
+          <div><dt>Accuracy</dt><dd id="accuracy-value">—</dd></div>
+          <div><dt>Position</dt><dd id="position-value">—</dd></div>
+          <div><dt>Updates</dt><dd id="updates-value">0</dd></div>
+          <div><dt>Last update</dt><dd id="last-update-value">—</dd></div>
+        </dl>
+        <p id="tracker-message" class="tracker-message" role="status">Press Enable Precise Location to begin.</p>
+        <div class="action-row">
+          <button id="calibrate-button" class="secondary-button" disabled>Calibrate Position</button>
+          <button id="stop-button" class="quiet-button" disabled>Stop Sharing</button>
+        </div>
+      </section>
+
+      <section id="dev-card" class="tracker-card dev-card" hidden>
+        <div>
+          <p class="eyebrow">Development only</p>
+          <h2>DEV SIMULATION</h2>
+          <p class="muted">Sends clearly labeled floor positions without using browser GPS. This control exists only when <code>SEURANTA_DEV_MODE=true</code>.</p>
+        </div>
+        <button id="dev-button" class="secondary-button">Start DEV SIMULATION</button>
+      </section>
+
+      <footer class="tracker-footer">
+        <span>Consenting test participants only.</span>
+        <span id="deployment-label">Seuranta deployment</span>
+      </footer>
+    </main>
+    <script src="/tracker/tracker.js" defer></script>
+  </body>
+</html>
