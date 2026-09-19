@@ -328,6 +328,9 @@ class PositionEstimate:
         radius = _require_number(data, "accuracy_radius_m")
         if radius < 0.0:
             raise ValueError("accuracy_radius_m cannot be negative")
+        is_outside_map = data.get("is_outside_map")
+        if not isinstance(is_outside_map, bool):
+            raise ValueError("is_outside_map must be boolean")
         for timestamp_field in ("calculated_at", "window_start", "window_end"):
             parse_timestamp_ms(data.get(timestamp_field), field_name=timestamp_field)
         return cls(
@@ -353,7 +356,7 @@ class PositionEstimate:
             observation_count=_require_int(data, "observation_count"),
             mode=_require_string(data, "mode"),
             sequence_number=_require_int(data, "sequence_number"),
-            is_outside_map=data.get("is_outside_map") if isinstance(data.get("is_outside_map"), bool) else False,
+            is_outside_map=is_outside_map,
         )
 
     def to_dict(self) -> dict[str, Any]:
