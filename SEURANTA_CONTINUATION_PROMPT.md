@@ -15,7 +15,7 @@ Continue the Seuranta frontend in `https://github.com/yonathanwold/Seuranta.git`
 
 - Repository: `https://github.com/yonathanwold/Seuranta.git`
 - Current branch: `team/app`
-- Latest implementation commit when this handoff was written: `67f8f12` (`feat(app): switch demo to Virginia Tech classroom floor`)
+- Latest implementation commit when this handoff was written: `fe55a3d` (`feat(ui): adopt Seuranta white and black brand system`)
 - Run `git rev-parse HEAD` after checkout for the exact newest handoff commit.
 
 `team/app` is an orphan frontend history. It has no merge base with the three backend team branches. Do not merge those histories into this branch, force-push, or rewrite another team's branch.
@@ -43,6 +43,7 @@ src/
   App.tsx
   styles.css
   components/MapCanvas.tsx
+  brand-system.css
   domain/
     adapters.ts
     camera.ts
@@ -78,6 +79,9 @@ The app uses the uncompressed GLB because it is about 0.5 MB and opens without a
 - Shared normalized provider boundary for Simulation and Live.
 - Strict live snapshot/delta scope validation, monotonic revisions, abort/generation guards, data-less heartbeat handling, and honest unavailable states.
 - Responsive desktop layout checked at 1366×768 and 1920×1080.
+- Supplied Seuranta logo cropped into full and compact assets, applied to the navigation, favicon, README, and responsive rail.
+- White/black product theme with green/amber reserved for health and simulation state.
+- Static floor-plan fallback with selectable devices and anchors when a browser cannot create WebGL.
 - Natural project documentation, demo guide, architecture notes, and privacy guidance.
 
 ## Model and coordinate assumptions
@@ -151,11 +155,11 @@ npm.cmd run build            passed
 npm.cmd audit --omit=dev     0 vulnerabilities
 ```
 
-The build prints Vite's chunk-size advisory because Three.js is in the main bundle. That is the only build warning.
+The build prints Vite's chunk-size advisory because Three.js is in the main bundle. That is the only build warning. The full GLB was also verified in a software-WebGL Chromium capture; restricted browsers use the static floor-plan fallback instead.
 
 Manual browser QA covered:
 
-- WebGL model rendering at 1366×768 and 1920×1080
+- WebGL model rendering at 1920×1080 with software WebGL, plus the static preview at 1366×768 and 1920×1080 in the restricted browser surface
 - Overview, Top, and Focus
 - search and linked selection
 - pause/play and simulation movement
