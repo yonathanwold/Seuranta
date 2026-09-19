@@ -123,12 +123,14 @@ describe('live provider', () => {
     const missingEvent = { ...event('event-missing') } as Record<string, unknown>
     delete missingEvent.floor_id
     const crossEvent = { ...event('event-cross'), run_id: 'run-elsewhere' }
+    const unknownModeNode = { ...node('a-unknown'), mode: 'not-a-mode' }
     socket.send('position', missingPosition, 8)
     socket.send('position', crossPosition, 9)
     socket.send('node', missingNode, 10)
     socket.send('node', crossNode, 9)
     socket.send('event', missingEvent, 11)
     socket.send('event', crossEvent, 12)
+    socket.send('node', unknownModeNode, 13)
     expect(states.at(-1)).toEqual({ revision: 4, positions: 1, nodes: 1, events: 0 })
     provider.stop()
   })

@@ -21,6 +21,7 @@ const isStatePayload = (value: unknown): value is WireRecord => isRecord(value) 
 const revisionOf = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.round(value)) : undefined
 const wireMode = (mode: NormalizedMode | undefined): 'real' | 'simulated' => mode === 'SIMULATION' ? 'simulated' : 'real'
 const wireScopeFields = ['run_id', 'deployment_id', 'building_id', 'floor_id'] as const
+const recognizedModes = new Set(['LIVE', 'REAL', 'PRODUCTION', 'SIMULATION', 'SIMULATED', 'REPLAY', 'HISTORICAL'])
 
 /** Live adapter: scoped REST snapshot plus typed state-revision WebSocket deltas. */
 export class LivePositionProvider implements PositionProvider {
@@ -170,7 +171,11 @@ export class LivePositionProvider implements PositionProvider {
     const values = wireScopeFields.map((field) => data[field])
     if (values.some((value) => typeof value !== 'string' || !value)) return false
     if (values[0] !== this.scope.runId || values[1] !== this.scope.deploymentId || values[2] !== this.scope.buildingId || values[3] !== this.scope.floorId) return false
-    if (data.mode !== undefined && (typeof data.mode !== 'string' || adaptMode(data.mode) !== (this.scope.mode ?? 'LIVE'))) return false
+    if (data.mode !== undefined) {
+      if (typeof data.mode !== 'string') return false
+      const normalizedMode = data.mode.trim().toUpperCase()
+      if (!recognizedModes.has(normalizedMode) || adaptMode(normalizedMode) !== (this.scope.mode ?? 'LIVE')) return false
+    }
     return true
   }
 
