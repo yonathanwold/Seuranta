@@ -2,7 +2,7 @@
 
 Each anchor sends observations to the API.  This component groups fresh,
 same-session readings by anchor and writes one deterministic position when at
-least three calibrated anchors are available.  It is intentionally in-process
+least the configured number of calibrated anchors are available.  It is intentionally in-process
 for a small four-Pi demo; it can later be replaced by the existing external
 positioning forwarder without changing the edge contract.
 """
@@ -25,20 +25,25 @@ from .engine import PositioningError, RangeMeasurement, estimate_rssi_position
 class PositionerStatus:
     enabled: bool
     configured_anchors: int
+    minimum_anchors: int
     emitted: int
     skipped: int
     last_error: str | None
 
 
 class InternalPositioner:
-    def __init__(self, anchors: list[AnchorDefinition], window_seconds: float = 3.0) -> None:
+    def __init__(self, anchors: list[AnchorDefinition], window_seconds: float = 3.0,
+                 minimum_anchors: int = 3) -> None:
         if len(anchors) < 3:
             raise ValueError("internal positioning needs at least three calibrated anchors")
         if window_seconds <= 0:
             raise ValueError("positioning window must be positive")
+        if not 3 <= minimum_anchors <= len(anchors):
+            raise ValueError("positioning minimum anchors must be between three and the configured anchor count")
         self._anchors = {anchor.anchor_id: anchor for anchor in anchors}
         if len(self._anchors) != len(anchors):
             raise ValueError("positioning anchor IDs must be unique")
+        self._minimum_anchors = minimum_anchors
         self._window = timedelta(seconds=window_seconds)
         self._recent: dict[tuple[str, str, str, str, str, Mode, str], dict[str, SignalObservation]] = defaultdict(dict)
         self._scan_history: dict[
@@ -50,7 +55,8 @@ class InternalPositioner:
         self._last_error: str | None = None
 
     @classmethod
-    def from_json(cls, raw: str, window_seconds: float = 3.0) -> "InternalPositioner":
+    def from_json(cls, raw: str, window_seconds: float = 3.0,
+                  minimum_anchors: int = 3) -> "InternalPositioner":
         try:
             decoded = json.loads(raw)
         except json.JSONDecodeError as exc:
@@ -62,11 +68,12 @@ class InternalPositioner:
             anchors = [AnchorDefinition.model_validate(item) for item in values]
         except Exception as exc:
             raise ValueError("SEURANTA_POSITIONING_ANCHORS_JSON contains an invalid anchor") from exc
-        return cls(anchors, window_seconds)
+        return cls(anchors, window_seconds, minimum_anchors)
 
     @property
     def status(self) -> PositionerStatus:
-        return PositionerStatus(enabled=True, configured_anchors=len(self._anchors), emitted=self._emitted,
+        return PositionerStatus(enabled=True, configured_anchors=len(self._anchors), minimum_anchors=self._minimum_anchors,
+                                emitted=self._emitted,
                                 skipped=self._skipped, last_error=self._last_error)
 
     @staticmethod
@@ -148,7 +155,7 @@ class InternalPositioner:
             confidence=result.confidence,
             accuracy_radius_m=result.accuracy_radius_m,
             position_method=f"rssi_log_distance_multilateration/{source}",
-            smoothing_method="none",
+            smoothing_method="median_rssi_scan_window",
             anchors_used=list(result.anchors_used),
             observation_count=len(observations),
             mode=mode,
@@ -179,7 +186,7 @@ class InternalPositioner:
                 ]
                 if scans:
                     fresh.append(self._aggregate_recent_scans(key, anchor_id, scans))
-            if len(fresh) < 3:
+            if len(fresh) < self._minimum_anchors:
                 self._skipped += 1
                 continue
             fingerprint = tuple(sorted((item.anchor_id, item.observation_id) for item in fresh))

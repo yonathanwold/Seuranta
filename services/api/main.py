@@ -51,7 +51,8 @@ class Runtime:
             if not settings.positioning_anchors_json:
                 raise ValueError("SEURANTA_INTERNAL_POSITIONING requires SEURANTA_POSITIONING_ANCHORS_JSON")
             self.positioner = InternalPositioner.from_json(settings.positioning_anchors_json,
-                                                            settings.positioning_window_seconds)
+                                                            settings.positioning_window_seconds,
+                                                            settings.positioning_min_anchors)
         self.state_revision = 0
         self.started_at = time.monotonic()
         self.live: LiveManager | None = None

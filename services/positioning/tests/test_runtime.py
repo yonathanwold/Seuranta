@@ -70,3 +70,26 @@ def test_positioner_uses_the_median_of_recent_scans_for_an_anchor():
 
     assert aggregate.rssi_dbm == -60
     assert aggregate.observation_id not in {scan.observation_id for scan in scans}
+
+
+def test_positioner_can_require_all_configured_anchors():
+    positioner = InternalPositioner([
+        AnchorDefinition(anchor_id="pi-1", x_m=0, y_m=0),
+        AnchorDefinition(anchor_id="pi-2", x_m=6, y_m=0),
+        AnchorDefinition(anchor_id="pi-3", x_m=0, y_m=4),
+        AnchorDefinition(anchor_id="pi-4", x_m=6, y_m=4),
+    ], minimum_anchors=4)
+    observed_at = utc_now()
+    readings = [
+        _observation("pi-1", -60, 1, observed_at),
+        _observation("pi-2", -65, 2, observed_at),
+        _observation("pi-3", -62, 3, observed_at),
+    ]
+
+    assert positioner.ingest(readings) == []
+
+    positions = positioner.ingest([_observation("pi-4", -68, 4, observed_at)])
+
+    assert len(positions) == 1
+    assert positions[0].observation_count == 4
+    assert positioner.status.minimum_anchors == 4

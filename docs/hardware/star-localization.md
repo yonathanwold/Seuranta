@@ -58,7 +58,8 @@ measurements from the real room):
 
 ```sh
 export SEURANTA_INTERNAL_POSITIONING=true
-export SEURANTA_POSITIONING_WINDOW_SECONDS=3
+export SEURANTA_POSITIONING_WINDOW_SECONDS=10
+export SEURANTA_POSITIONING_MIN_ANCHORS=4
 export SEURANTA_POSITIONING_ANCHORS_JSON='[
   {"anchor_id":"pi-1","x_m":0,"y_m":0,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
   {"anchor_id":"pi-2","x_m":6,"y_m":0,"tx_power_dbm_at_1m":-59,"path_loss_exponent":2.2},
@@ -67,8 +68,10 @@ export SEURANTA_POSITIONING_ANCHORS_JSON='[
 ]'
 ```
 
-When live RSSI observations arrive from three or more configured anchors in the
-same session and three-second window, the API creates a position automatically.
+When live RSSI observations arrive from the configured minimum number of
+anchors in the same session and time window, the API creates a position
+automatically. For the four-Pi room grid, require all four anchors and use a
+ten-second window so an incomplete or stale scan cannot move the phone dot.
 The API health endpoint exposes the internal estimator's configured-anchor,
 emitted, skipped, and latest-error counts.
 
