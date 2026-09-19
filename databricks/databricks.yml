@@ -11,6 +11,8 @@ variables:
     default: seuranta
   warehouse_id:
     default: ""
+  workspace_host:
+    default: ""
 
 targets:
   dev:
