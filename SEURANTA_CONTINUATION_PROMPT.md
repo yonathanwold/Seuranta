@@ -18,7 +18,7 @@ npm.cmd test
 npm.cmd run build
 ```
 
-The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` and record that value here if this handoff is updated. The latest pre-handoff SHA before this docs/handoff commit is `e95cfa8` (`feat(3d): smooth camera preset transitions`).
+The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` and record that value here if this handoff is updated. The latest pre-handoff SHA before this final handoff revision is `4b1365d` (`fix(app): keep R3F scene as single map layer`).
 
 ## Inspect before editing
 
