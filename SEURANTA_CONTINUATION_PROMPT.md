@@ -18,7 +18,7 @@ npm.cmd test
 npm.cmd run build
 ```
 
-The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` and record that value here if this handoff is updated. The latest pre-handoff SHA is the last commit shown by `git log --oneline` immediately before this handoff commit.
+The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` and record that value here if this handoff is updated. The latest pre-handoff SHA before this docs/handoff commit is `e95cfa8` (`feat(3d): smooth camera preset transitions`).
 
 ## Inspect before editing
 
@@ -46,6 +46,7 @@ These histories are unrelated. Backend changes are out of scope for this fronten
 
 - Polished dark-nav/light-stage operations atlas shell.
 - Real Three.js/R3F floor scene with dimensional geometry, entities, anchors, confidence, labels, and camera controls.
+- Smooth 350 ms-class camera preset transitions that stop when the operator manually orbits/pans/zooms.
 - Simulation and live provider abstraction with normalized contracts and honest empty/reconnect state.
 - Synchronized entity search/list/map/detail selection and operational event feed.
 - Documentation, privacy boundary, tests, lint, and production build.

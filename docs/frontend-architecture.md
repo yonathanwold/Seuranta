@@ -2,7 +2,7 @@
 
 ## Boundary and module ownership
 
-The UI has one normalized boundary. Backend payloads remain snake_case at the boundary; components and stores use camelCase domain types only.
+The UI has one normalized boundary. Backend payloads remain snake_case at the boundary; components and stores use camelCase domain types only. Camera presets use a short interpolated transition and yield to manual OrbitControls input.
 
 ```text
 src/
