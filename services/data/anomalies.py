@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from datetime import datetime, timedelta, timezone
+from uuid import NAMESPACE_URL, uuid5
 
 from .models import Anomaly, Mode, utc_now
 from .store import LocalStore
@@ -82,5 +83,8 @@ def detect_anomalies(store: LocalStore, run_id: str, deployment_id: str, buildin
                 break
 
     for anomaly in result:
+        key = ":".join((anomaly.run_id, anomaly.building_id or "", anomaly.floor_id or "", anomaly.anomaly_type,
+                         anomaly.anchor_id or "", anomaly.zone_id or "", anomaly.session_id or ""))
+        anomaly.anomaly_id = str(uuid5(NAMESPACE_URL, f"seuranta:{key}"))
         store.upsert_anomaly(anomaly)
     return result

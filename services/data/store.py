@@ -350,17 +350,39 @@ class LocalStore:
 
     def reconstruct_state(self, run_id: str, deployment_id: str, building_id: str, floor_id: str, mode: Mode,
                           revision: int) -> BuildingState:
+        observations = self.list_observations(run_id, deployment_id, building_id, floor_id, 10000)
         sessions = self.list_sessions(run_id, deployment_id, building_id, floor_id, 500)
         positions = self.list_positions(run_id, deployment_id, building_id, floor_id, 500)
         events = self.list_events(run_id, deployment_id, building_id, floor_id, 100)
         nodes = self.list_nodes(run_id, deployment_id, building_id, floor_id)
+        latest_observation: dict[str, datetime] = {}
+        for observation in observations:
+            timestamp = datetime.fromisoformat(observation["observed_at"].replace("Z", "+00:00"))
+            if timestamp > latest_observation.get(observation["session_id"], datetime.min.replace(tzinfo=timezone.utc)):
+                latest_observation[observation["session_id"]] = timestamp
+        now = utc_now()
+        session_view = []
+        for session in sessions:
+            view = dict(session)
+            if session.get("ended_at"):
+                view["status"] = "ended"
+            elif now - latest_observation.get(session["session_id"], now) > timedelta(seconds=90):
+                view["status"] = "silent"
+            else:
+                view["status"] = "active"
+            session_view.append(view)
         zones: dict[str, int] = {}
         for position in positions:
             if position.get("zone_id"):
                 zones[position["zone_id"]] = zones.get(position["zone_id"], 0) + 1
         zone_metrics = [{"zone_id": zone_id, "occupancy": count} for zone_id, count in sorted(zones.items())]
-        now = utc_now()
-        active = sum(1 for session in sessions if not session.get("ended_at"))
+        active = sum(1 for session in session_view if session["status"] == "active")
+        silent = sum(1 for session in session_view if session["status"] == "silent")
+        ended = sum(1 for session in session_view if session["status"] == "ended")
+        mode_counts: dict[str, int] = {}
+        for table in ("observations", "positions", "events", "sessions", "heartbeats"):
+            rows = self._conn.execute(f"SELECT mode, COUNT(*) AS count FROM {table} WHERE run_id = ? GROUP BY mode", (run_id,)).fetchall()
+            mode_counts[table] = sum(int(row["count"]) for row in rows if row["mode"] == mode.value)
         return BuildingState(
             state_revision=revision,
             generated_at=now,
@@ -369,8 +391,9 @@ class LocalStore:
             floor_id=floor_id,
             run_id=run_id,
             mode=mode,
-            counts={**self.counts(run_id, building_id, floor_id), "active_sessions": active},
-            sessions=sessions,
+            counts={**self.counts(run_id, building_id, floor_id), "active_sessions": active, "silent_sessions": silent,
+                    "ended_sessions": ended, "event_rate_per_second": len(events) / 600, "real_simulated_records": mode_counts.get("events", 0)},
+            sessions=session_view,
             positions=positions,
             nodes=nodes,
             zones=[{"zone_id": key} for key in sorted(zones)],
@@ -394,12 +417,25 @@ class LocalStore:
         dwell = [int(e["dwell_ms"]) for e in events if e.get("dwell_ms") is not None]
         dwell.sort()
         p95 = dwell[min(len(dwell) - 1, int(len(dwell) * 0.95))] if dwell else 0
+        entries = [e for e in events if e.get("event_type") == "entry"]
+        exits = [e for e in events if e.get("event_type") == "exit"]
+        nodes = self.list_nodes(run_id, deployment_id, building_id, floor_id)
+        node_modes = {"real": 0, "simulated": 0}
+        available_nodes = 0
+        for node in nodes:
+            node_modes[node.get("mode", "real")] = node_modes.get(node.get("mode", "real"), 0) + 1
+            if node.get("status") == "online":
+                available_nodes += 1
         return {
             "window_minutes": window_minutes,
             "occupancy": {"total_positions": len(positions), "by_zone": zone_counts, "active_sessions": sum(1 for s in sessions if not s.get("ended_at"))},
             "transitions": {"count": len(transitions), "items": transitions[-100:]},
+            "entries_exits": {"entries": len(entries), "exits": len(exits)},
             "dwell": {"count": len(dwell), "average_ms": sum(dwell) / len(dwell) if dwell else 0, "p95_ms": p95},
             "event_rate": len(events) / max(window_minutes * 60, 1),
+            "anchor_availability": {"available": available_nodes, "total": len(nodes), "by_mode": node_modes},
+            "real_simulated_counts": {"real": sum(1 for x in observations + positions + events if x.get("mode") == "real"),
+                                      "simulated": sum(1 for x in observations + positions + events if x.get("mode") == "simulated")},
             "observations": len(observations),
             "data_through": max((x.get("observed_at", "") for x in observations), default=None),
         }
