@@ -1,95 +1,124 @@
 # SEURANTA CONTINUATION PROMPT
 
-You are continuing the Seuranta Atlas frontend implementation in `https://github.com/yonathanwold/Seuranta.git`.
+You are continuing the Seuranta frontend in `https://github.com/yonathanwold/Seuranta.git`.
 
-## Start here
+## First six steps
 
-The current branch is `team/app`. This branch is an orphan frontend branch and intentionally has no merge base with `team/edge`, `team/data-platform`, or `team/positioning`. Never merge those histories into this branch and never reset or force-push any team branch. Fetch first, inspect recent commits and status, read this handoff and `docs/frontend-architecture.md`, then run the app, tests, and build before changing design or structure.
+1. Fetch the remote without changing unrelated branches: `git fetch origin`.
+2. Inspect the current checkout and recent commits: `git switch team/app`, `git status --short --branch`, and `git log --oneline --decorate -8`.
+3. Read this file and `docs/frontend-architecture.md` before changing code.
+4. Run the app with `npm.cmd install` and `npm.cmd run dev` (or the exact QA command `npm.cmd run dev -- --host 127.0.0.1 --port 4173`).
+5. Run `npm.cmd test`, `npm.cmd run lint`, and `npm.cmd run build`; also run `npm.cmd audit --omit=dev` when security status matters.
+6. Continue from the current implementation and its open items. Do not redesign the app or copy backend histories just because you are new to the repository.
 
-```powershell
-git fetch origin
-git switch team/app
-git status --short --branch
-git log --oneline --decorate -8
-Get-Content .\SEURANTA_CONTINUATION_PROMPT.md
-npm.cmd install
-npm.cmd run dev
-npm.cmd test
-npm.cmd run build
-```
+## Branch and commit context
 
-The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` to obtain the exact final value. This handoff revision cannot safely contain its own SHA; the latest pre-handoff SHA before this handoff revision is `b8dec4a6abae792f4bb191ad240da823768cd7ec` (`fix(app): reject unknown live delta modes`).
+The current branch is `team/app`. It is an orphan frontend branch with no merge base with `team/edge`, `team/data-platform`, or `team/positioning`. Do not merge those histories into this branch. Do not reset, delete, force-push, or rewrite any of those three team branches.
 
-## Inspect before editing
+The final SHA in this file is intentionally self-referential. After the last commit, run `git rev-parse HEAD` to get the exact final SHA; putting that value into this file would create another commit. The latest pre-handoff SHA is `70ab041687ee1ca1e00975775d11bac8fc68dc10` (`docs(app): record final live scope revision`).
 
-Inspected upstream branches and heads at implementation time:
+## Branches inspected
 
-- `origin/team/edge` — `7e9ce2a` (Pi edge agent, mode/status and heartbeat conventions).
-- `origin/team/data-platform` — `4014883` (FastAPI/data API, state reconstruction and WebSocket deltas).
-- `origin/team/positioning` — `5667d03` (positioning, zones, smoothing, event variants).
+These upstream heads were inspected while building the frontend:
 
-These histories are unrelated. Backend changes are out of scope for this frontend branch.
+- `origin/team/edge` — `7e9ce2a`, Pi edge agent, heartbeat and mode/status conventions.
+- `origin/team/data-platform` — `4014883`, state reconstruction, REST, and WebSocket deltas.
+- `origin/team/positioning` — `5667d03`, position estimates, zones, smoothing, and event variants.
 
-## Architecture and files
+They have unrelated root histories. Backend changes are outside the scope of `team/app`.
 
-- `src/domain/types.ts`: normalized organization/site/building/floor, `PositionEstimate`, `SpatialEvent`, `NodeHeartbeat`, provider snapshot, and state types.
-- `src/domain/adapters.ts`: the one snake_case-to-camelCase boundary. It normalizes `REAL`/`real` to `LIVE`, simulated variants to `SIMULATION`, and accepts REST `{ data: ... }` wrappers.
-- `src/domain/coordinates.ts`: one world unit per metre, backend x → world x, backend y → world -z, centred `(16, 11)` origin.
-- `src/domain/floorDefinition.ts`: 32 m × 22 m Riverside Office Floor 2, 0.25 m slab, 0.65 m walls, room/zone polygons, and four anchor coordinates.
-- `src/domain/mockProvider.ts`: five anonymous sessions on believable routes, confidence/accuracy, events, zone occupancy, and mixed anchor status.
-- `src/domain/liveProvider.ts`: scoped `GET /api/v1/state` plus `/api/v1/live` WebSocket with typed position/node/event reduction, strict four-field wire scope validation, bounded reconnect, snapshot-required rehydration, revision preservation, and last-state preservation.
-- `src/components/MapCanvas.tsx` / `src/domain/camera.ts`: R3F floor geometry, OrbitControls, explicit Overview/Top/Focus camera requests, one-shot Focus retargeting on selection identity changes, entity interpolation, anchors, confidence disc, labels, and Canvas WebGL fallback message.
-- `src/App.tsx` and `src/styles.css`: operation shell, explorer, synchronized selection/search, detail panel, layer controls, responsive design system.
-- `src/tests/`: coordinate, adapter, and provider unit coverage.
+## What is here
+
+- `src/domain/types.ts` — normalized organization/site/building/floor, position, event, node, state, and provider types.
+- `src/domain/adapters.ts` — the single snake_case-to-camelCase boundary, including mode/status and response-wrapper handling.
+- `src/domain/coordinates.ts` — tested metre-to-Three.js transform and inverse conversion.
+- `src/domain/floorDefinition.ts` — 32 m × 22 m Riverside Office Floor 2, rooms, zones, walls, and four configured anchor locations.
+- `src/domain/mockProvider.ts` — five anonymous sessions on smooth waypoint routes, confidence, accuracy, events, and mixed anchor health.
+- `src/domain/liveProvider.ts` — scoped REST/WS adapter, typed position/node/event deltas, strict four-field scope checks, revision handling, reconnects, and snapshot-required rehydration.
+- `src/domain/camera.ts` — one-shot Focus retargeting when the selected session identity changes.
+- `src/domain/store.ts` — Zustand mode, selection, search, snapshot, and layer state.
+- `src/components/MapCanvas.tsx` — R3F floor, orbit controls, markers, confidence discs, labels, camera presets, and Canvas fallback.
+- `src/App.tsx` and `src/styles.css` — the shell, explorer, details, controls, and visual system.
+- `src/tests/` — transform, floor, adapter, mock provider, live provider, and camera tests.
+- `docs/frontend-architecture.md` — contracts, module responsibilities, coordinates, provider behavior, and integration path.
+- `docs/demo-guide.md` — repeatable Simulation presentation flow.
+- `CONTRIBUTING.md` — branch, check, privacy, and pull request guidance.
+- `.github/PULL_REQUEST_TEMPLATE.md` — short review checklist.
 
 ## Completed
 
-- Polished dark-nav/light-stage operations atlas shell.
-- Real Three.js/R3F floor scene with dimensional geometry, entities, anchors, confidence, labels, and camera controls.
-- Smooth 350 ms-class camera preset transitions that stop when the operator manually orbits/pans/zooms.
-- Simulation and live provider abstraction with normalized contracts, scoped live URLs, typed deltas, and honest empty/reconnect state.
-- Every visible control has meaning: unsupported analytics/settings/help/replay surfaces are omitted, building/floor context is static, Map layers focuses its layer controls, and the detail panel exposes only its implemented Details tab.
-- Synchronized entity search/list/map/detail selection and operational event feed.
-- Documentation, privacy boundary, tests, lint, and production build.
+- Real Three.js/R3F floor geometry with a readable elevated view.
+- Smooth anonymous simulation with five sessions, four anchors, confidence, uncertainty, zone events, and anchor health.
+- Shared Mock/Live provider boundary with scoped live URLs and typed WebSocket deltas.
+- REST/WS mode normalization (`LIVE`/`SIMULATION` to `real`/`simulated`) and defensive scope/mode validation.
+- Entity search, linked list/map/detail selection, anchor diagnostics, recent activity, layer switches, and working Overview/Top/Focus controls.
+- Focus retargeting on selection identity changes without camera movement on routine telemetry ticks.
+- Honest live unavailable/empty state and a real Canvas WebGL fallback message with usable DOM lists.
+- Documentation, contribution notes, demo guide, privacy boundary, tests, lint, production build, and production-only audit check.
 
-## Incomplete / known limitations
+## Incomplete and known limitations
 
-- The live API is scaffolded to the documented V1 REST/WebSocket boundary; no backend is bundled on this branch, so Live mode is expected to show unavailable/empty state without a running service.
-- Browser verification used the local Vite app at the available Chrome extension viewport of 1440×756 (the browser capability did not expose an exact viewport override). It confirmed shell, simulation updates, selection/search, layer toggles, explicit focus, manual orbit persistence across telemetry ticks, empty live state, and a fresh-tab console with no app errors. Exact 1366×768 and 1920×1080 viewport sign-off remains a follow-up if a resizable browser is available.
-- The current backend does not send anchor coordinates in heartbeat payloads; floor configuration remains authoritative.
-- The production bundle emits the normal Vite warning that the Three.js chunk is larger than 500 kB; code splitting can be considered after product scope stabilizes.
-- WebGL fallback is a concise Canvas fallback message; the explorer remains the usable DOM entity/anchor list. No alternate DOM floor renderer is claimed.
-- Unsupported product surfaces such as heatmaps, AI summaries, personal profiles, and settings forms are intentionally omitted.
+- No backend service is bundled. Live mode is expected to show unavailable or empty state until a compatible scoped API is running.
+- Building and floor are static demo context. Replay is not exposed because no replay provider exists.
+- The current backend heartbeat does not carry anchor coordinates; the floor definition remains authoritative for placement.
+- The browser QA tool provided a 1440 px-wide desktop viewport but no exact 1366 × 768 or 1920 × 1080 override. Those exact sizes still need a normal resizable browser check.
+- The production build prints the usual Three.js chunk-size advisory. No code-splitting work has been started.
+- If WebGL cannot initialize, the fallback is a concise message plus the entity/anchor DOM lists; there is no alternate DOM-rendered floor.
+- No functional app bug is known from the current checks. Unsupported surfaces such as analytics, settings forms, heatmaps, personal profiles, and summaries are intentionally omitted.
 
-## Checks run
+## Checks and exact commands
 
-The following were run successfully during this handoff:
+The current code has been checked with:
 
 ```text
 npm.cmd install
-npm.cmd test       # 6 files, 16 tests passed
-npm.cmd run lint   # passed
-npm.cmd run build  # TypeScript + Vite production build passed; chunk-size advisory only
-npm.cmd audit      # 5 vulnerabilities (3 moderate, 1 high, 1 critical); npm recommends --force, not applied
+npm.cmd test                 # 6 files, 16 tests passed
+npm.cmd run lint             # passed
+npm.cmd run build            # passed; Three.js chunk-size advisory only
+npm.cmd audit --omit=dev     # 0 production vulnerabilities
 ```
 
-The dev server was run with `npm.cmd run dev -- --host 127.0.0.1 --port 4173`. Browser checks confirmed the simulation revision advances, five anonymous devices appear, entity search filters, list selection updates the detail panel and scene label, camera presets change only on explicit requests, manual orbit remains after telemetry ticks, layer toggles work, and Live mode presents an empty/unavailable state. A fresh browser tab reported no app console errors; one stale pre-reload Vite HMR error and unrelated extension warnings were excluded from that result.
+The ordinary npm equivalents are `npm install`, `npm test`, `npm run lint`, `npm run build`, and `npm audit --omit=dev`.
 
-## Integration assumptions and contracts
+The local dev server used for browser QA was:
 
-Keep the exact PositionEstimate V1 field set in `docs/frontend-architecture.md`. State is expected from scoped `GET /api/v1/state` and live updates from scoped `WS /api/v1/live` as initial snapshots plus `{ type, state_revision, data }` deltas. REST and WS use `run_id`, `deployment_id`, `building_id`, `floor_id`, and data-platform `real`/`simulated` mode query values; reconnects use `since_revision`, and `snapshot_required` triggers a full refresh. Keep DTO tolerance for wrappers, mode casing, edge/data status differences, and positioning event `attributes` versus data-platform `metadata`. Do not put raw MACs, payloads, names, or personal identifiers into the UI.
+```powershell
+npm.cmd run dev -- --host 127.0.0.1 --port 4173
+```
 
-## Priorities for the next agent
+Manual QA covered Simulation movement, five anonymous devices, search, linked selection, layers, camera presets, Focus retargeting, manual orbit persistence across telemetry, Live unavailable state, and the browser console. The available browser showed no current app console errors; unrelated extension warnings and one stale pre-reload Vite HMR message were not app failures.
 
-1. Run a normal browser at 1920×1080 and 1366×768; inspect floor framing and marker readability, then fix only concrete visual/runtime issues.
-2. Connect a real API through the existing adapter and test snapshot/delta/reconnect behavior against the data-platform branch without copying backend code here.
-3. Add targeted tests for any contract changes; keep `npm.cmd test`, lint, and build green.
-4. Consider code splitting the Three.js bundle only if performance evidence warrants it.
+## Contracts and assumptions
 
-## Agent assignments and active-file warning
+Keep the exact PositionEstimate V1 fields in `docs/frontend-architecture.md`:
 
-The root lead owns architecture decisions and final synthesis. The app implementation agent owns this branch's frontend, docs, tests, commits, and pushes. Other agents may inspect branches read-only. Files under `src/`, `docs/`, and this handoff are active implementation files; inspect the working tree before editing because all collaborators share the checkout.
+```text
+schema_version, position_id, calculated_at, window_start, window_end,
+run_id, deployment_id, building_id, floor_id, session_id,
+raw_x_m, raw_y_m, x_m, y_m, zone_id, confidence,
+accuracy_radius_m, position_method, smoothing_method, anchors_used,
+observation_count, mode, sequence_number, is_outside_map
+```
 
-## Safe git workflow
+The live boundary is scoped `GET /api/v1/state` plus `WS /api/v1/live`. Both use `run_id`, `deployment_id`, `building_id`, `floor_id`, and `real`/`simulated` mode query values. Reconnects use `since_revision` where possible. WebSocket messages are `{ type, state_revision, data }`; snapshots replace state, position/node/event messages update one entity, heartbeat/observation messages can advance revisions, and `snapshot_required` triggers a full refresh. Missing or cross-scope typed deltas must not be accepted.
 
-Use small, buildable conventional commits. Confirm branch and status before edits. Push only `team/app` with a normal push; never force-push. Do not reset, merge, delete, or rewrite `origin/team/edge`, `origin/team/data-platform`, or `origin/team/positioning`. Before handoff, run `git status`, `git log`, tests, lint, build, and `git rev-parse HEAD`, then update this file with the final SHA if desired.
+Keep adapter tolerance for bare versus `{ data: ... }` responses, edge uppercase modes/statuses, data-platform lowercase modes, positioning `attributes` versus data-platform `metadata`, and the known sessions/observation-batch shape differences. Do not put names, raw MACs, packet payloads, or personal identifiers into the UI.
+
+The coordinate contract is one world unit per metre. The floor origin is `(16, 11)` m; backend `x_m` maps to world `x`, backend `y_m` maps to world `-z`, and world `y` is vertical. Use `src/domain/coordinates.ts` instead of repeating math in components.
+
+## Next priorities
+
+1. Run the demo in a normal browser at exactly 1366 × 768 and 1920 × 1080, then fix only concrete framing or readability problems.
+2. Connect a compatible data-platform API and test scoped snapshots, typed deltas, reconnects, and `snapshot_required` behavior without copying backend code into this branch.
+3. Add focused tests for any contract change and keep all existing checks green.
+4. Consider Three.js code splitting only if measured load/performance evidence makes it worth the added complexity.
+
+## Ownership and active-file warning
+
+The root lead owns architecture decisions, task scope, and final synthesis. The app implementation agent owns the `team/app` frontend, docs, tests, commits, and pushes. Read-only reviewers may inspect the branch but should not edit it.
+
+Files under `src/`, `docs/`, `README.md`, `CONTRIBUTING.md`, `.github/`, and this handoff are active. Everyone shares this checkout, so inspect `git status` before editing and preserve changes you did not make.
+
+## Safe Git workflow
+
+Use small conventional commits that build and test. Work only on `team/app`, push with a normal `git push origin team/app`, and never force-push. Do not use `git reset --hard`, merge unrelated team branches, or rewrite `origin/team/edge`, `origin/team/data-platform`, or `origin/team/positioning`. Before handing work back, run `git status --short --branch`, `git log --oneline -8`, the checks above, and `git rev-parse HEAD`.

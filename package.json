@@ -2,6 +2,11 @@
   "name": "seuranta-atlas",
   "private": true,
   "version": "0.1.0",
+  "description": "React and Three.js frontend for anonymous indoor-positioning telemetry",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yonathanwold/Seuranta.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
