@@ -32,6 +32,16 @@ only as an in-memory consented token and sends a run-scoped HMAC session ID,
 not a Bluetooth address.  iOS may reduce or change advertising behavior in the
 background, so foreground operation is the supported first milestone.
 
+### No-code iPhone advertiser
+
+For the first demo, install [LightBlue](https://apps.apple.com/us/app/lightblue/id557428110)
+on the iPhone.  Its App Store listing describes creating a custom peripheral
+profile and advertising it from the phone.  Create one profile whose local name
+is exactly `Seuranta-iPhone`, add any basic custom service, and start its
+advertising toggle.  Keep LightBlue open while testing.  The Pi collector uses
+the name only to select the consented advertisement; it does not send the name
+or a Bluetooth address to the API.
+
 ## Anchor layout and calibration
 
 1. Measure every anchor from a shared origin in metres.  Avoid putting all
