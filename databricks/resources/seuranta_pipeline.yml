@@ -1,0 +1,42 @@
+resources:
+  jobs:
+    seuranta_daily_metrics:
+      name: seuranta-daily-metrics
+      description: >-
+        Rebuild the Seuranta Silver and Gold Delta tables from the append-only
+        Bronze tables. The development target is run on demand; production
+        scheduling belongs in the workspace that owns the deployment.
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+      tasks:
+        - task_key: create_tables
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../sql/00_schema.sql
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+        - task_key: create_silver_tables
+          depends_on:
+            - task_key: create_tables
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../sql/10_silver.sql
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+        - task_key: gold_metrics
+          depends_on:
+            - task_key: create_silver_tables
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../sql/30_gold_metrics.sql
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}

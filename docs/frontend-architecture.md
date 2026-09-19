@@ -136,6 +136,15 @@ Pi observations and heartbeats
 
 The frontend does not implement packet capture, device identity, calibration math for the positioning engine, or Raspberry Pi deployment.
 
+The backend handoff lives alongside the frontend in `services/` and
+`databricks/`. The API persists accepted anonymous records to SQLite WAL first,
+then an approved batch connector can append the same scoped contracts to
+Databricks Bronze tables. The Asset Bundle rebuilds Silver and Gold tables on
+demand. The frontend does not read Delta tables directly; it continues to use
+the API's REST snapshot and WebSocket boundary. See
+[docs/data-platform/README.md](data-platform/README.md) and
+[databricks/README.md](../databricks/README.md) for deployment details.
+
 ## Walkthrough and current limits
 
 Walkthrough mode switches the perspective camera to an eye-height first-person controller. WASD moves the camera while the canvas has keyboard focus. Drag the mouse to look, or use arrow keys to turn. Escape or any camera preset exits walking. Input clears on blur, and clicking a marker while walking does not select it. The camera readout updates a DOM output without rerendering the React tree every frame. Movement is capped after slow frames and sampled in steps of at most 5 cm against metadata-informed walkable envelopes with overlapping doorway bands, so the demo stays inside the building while still allowing room-to-corridor movement. Blocked movement slides along envelope edges. Origins, calibrated dimensions, and yaw use the same coordinate transforms as telemetry. This is a demo navigation layer, not the positioning team's eventual wall graph or a claim of surveyed collision accuracy.

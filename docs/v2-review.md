@@ -30,8 +30,20 @@ Concrete consistency checks used a paused snapshot: E5F6 had identical coordinat
 
 The selectable 2D preview was inspected and device selection worked. An actual GPU-disabled browser was not separately provisioned; the automatic no-WebGL path shares this preview. Reduced-motion handling was reviewed in code, not tested by changing the operating system preference. The long-duration boundary checks are automated domain tests, not a claim of surveyed wall collision.
 
+The data-platform handoff now includes the scoped REST/WebSocket API, SQLite
+WAL/outbox boundary, and a Databricks Asset Bundle with Bronze, Silver, and
+refreshable Gold SQL. The static bundle checks pass; no remote workspace or SQL
+warehouse was available for deployment validation.
+
 ## Remaining limits
 
 Geometry and anchor locations are estimates, not surveyed measurements. The movement envelope can cross an interior visual wall within a shared region; it prevents escape from the navigation envelope, not every GLB wall intersection. Device health is relative to snapshot time, while the source connection status indicates an unavailable or stale feed.
 
-No Raspberry Pi hardware, monitor mode, packet capture, Databricks, positioning service, or working live backend was tested. Live-unavailable behavior and existing provider contract tests were checked. The uncompressed model remains the runtime asset and Meshopt remains unused. Historical analytics, scheduled reports, replay, and upper-floor telemetry are absent. No new runtime library was added.
+No Raspberry Pi hardware, monitor mode, packet capture, Databricks workspace,
+positioning service, or working live backend was tested. Live-unavailable
+behavior and existing provider contract tests were checked. The uncompressed
+model remains the runtime asset and Meshopt remains unused. Historical
+analytics, scheduled reports, replay, and upper-floor telemetry are absent.
+The Databricks job is deployable and on demand, but credentials, a warehouse,
+Bronze ingestion, and workspace scheduling still belong to the deployment
+owner. No new runtime library was added.

@@ -1,0 +1,21 @@
+bundle:
+  name: seuranta-atlas
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    default: main
+  schema:
+    default: seuranta
+  warehouse_id:
+    description: SQL warehouse ID supplied by the deployment workspace
+    default: ""
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      profile: seuranta-dev

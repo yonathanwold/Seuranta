@@ -97,7 +97,7 @@ npm.cmd run dev
 
 Live snapshots and updates must match all four scope IDs. Old revisions, malformed messages, and cross-floor data are ignored. Switching scopes clears the old view immediately. Live mode never quietly falls back to simulation.
 
-The future pipeline is:
+The bundled integration path is:
 
 ```text
 Raspberry Pi observations and heartbeats
@@ -106,6 +106,7 @@ Raspberry Pi observations and heartbeats
   -> floor state and events
   -> REST snapshot + WebSocket updates
   -> Seuranta
+  -> optional Databricks Bronze/Silver/Gold batch metrics
 ```
 
 ## Project layout
@@ -128,6 +129,16 @@ src/
 docs/
   frontend-architecture.md
   demo-guide.md
+  data-platform/README.md
+
+databricks/
+  databricks.yml             Databricks Asset Bundle entry point
+  resources/                 on-demand Silver/Gold refresh job
+  sql/                       Bronze schema, Silver cleanup, and Gold metrics
+
+services/
+  api/                       scoped REST/WebSocket ingestion API
+  data/                      anonymous contracts, SQLite WAL, and sink boundary
 ```
 
 ## Privacy
@@ -136,6 +147,6 @@ The demo uses IDs such as `session-a7f3`. Do not add names, MAC addresses, raw p
 
 ## Current checks and limits
 
-ESLint, all 29 tests, and the production build pass. V2 adds regression coverage for shared workspace values and walkthrough bounds. We manually checked the main flow at 1366×768 and 1920×1080, including navigation between every page and locating a device from the inventory back on the map. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
+ESLint, all 29 frontend tests, the production build, and the static Databricks bundle checks pass. V2 adds regression coverage for shared workspace values and walkthrough bounds. We manually checked the main flow at 1366×768 and 1920×1080, including navigation between every page and locating a device from the inventory back on the map. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
 
-The model scale and upper floors are estimated, the planned anchor positions have not been surveyed, and no Raspberry Pi service is bundled with this branch. The V2 review started from remote `main` at `7d452a5`. See [docs/v2-review.md](docs/v2-review.md) for the checks and remaining limits. Read [docs/demo-guide.md](docs/demo-guide.md) before presenting and [docs/frontend-architecture.md](docs/frontend-architecture.md) before connecting a backend.
+The model scale and upper floors are estimated, the planned anchor positions have not been surveyed, and no Raspberry Pi hardware or Databricks workspace was available for remote validation. The data-platform API and deployable Databricks bundle are included, but credentials, warehouse IDs, ingestion scheduling, and workspace permissions remain deployment configuration. The V2 review started from remote `main` at `7d452a5`. See [docs/v2-review.md](docs/v2-review.md) for the checks and remaining limits. Read [docs/demo-guide.md](docs/demo-guide.md) before presenting, [docs/frontend-architecture.md](docs/frontend-architecture.md) before connecting a backend, and [docs/data-platform/README.md](docs/data-platform/README.md) before deploying the data platform.

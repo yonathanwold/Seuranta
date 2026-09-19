@@ -50,6 +50,6 @@ Before testing with Raspberry Pis in the building:
 - The model is not a survey, BIM, or confirmed georeferenced floor plan.
 - Planned anchors are not installed or measured anchors.
 - Simulated confidence is demo data, not a benchmark of the final positioning system.
-- Live mode is ready for the documented API, but this frontend branch does not bundle the Pi, positioning, or data-platform services.
+- Live mode is ready for the documented API. This branch also includes the scoped data API and a Databricks Asset Bundle, but the Pi agent, positioning worker, credentials, warehouse, and workspace deployment are still deployment work.
 
 Health labels describe position age and confidence, not physical device connectivity. We do not have battery readings or historical uptime. The Building view draws Floor 1 markers over geometry for readability; use the cutaway to interpret their location.
