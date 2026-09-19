@@ -62,6 +62,16 @@ class BufferTests(unittest.TestCase):
         self.assertEqual(window.window_start_ms, 1_200)
         self.assertEqual(window.window_end_ms, 1_300)
 
+    def test_existing_samples_are_removed_when_they_become_stale(self) -> None:
+        config = PositioningConfig(position_window_ms=1_000, stale_sample_ms=100, max_lateness_ms=100)
+        buffer = ObservationBuffer(config)
+        buffer.ingest([observation("a-1", "a", 1_000)])
+        buffer.ingest([observation("a-2", "a", 1_500)])
+        window = buffer.window_for(("run-1", "session-1"))
+        self.assertIsNotNone(window)
+        assert window is not None
+        self.assertEqual([item.timestamp_ms for item in window.observations], [1_500])
+
 
 class FilteringTests(unittest.TestCase):
     def test_median_mad_rejects_extreme_rssi(self) -> None:

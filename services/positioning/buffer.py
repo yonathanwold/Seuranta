@@ -119,7 +119,7 @@ class ObservationBuffer:
             state.seen_observation_ids.add(observation.observation_id)
             if state.max_seen_timestamp_ms is None or observation.timestamp_ms > state.max_seen_timestamp_ms:
                 state.max_seen_timestamp_ms = observation.timestamp_ms
-            state.last_ingest_timestamp_ms = now_ms or observation.timestamp_ms
+            state.last_ingest_timestamp_ms = now_ms if now_ms is not None else observation.timestamp_ms
             accepted.append(observation)
         for key in touched:
             self._trim(key)
@@ -129,7 +129,8 @@ class ObservationBuffer:
         state = self._sessions.get(key)
         if state is None or state.max_seen_timestamp_ms is None:
             return
-        lower_bound = state.max_seen_timestamp_ms - self.config.position_window_ms - self.config.max_lateness_ms
+        effective_window_ms = min(self.config.position_window_ms, self.config.stale_sample_ms)
+        lower_bound = state.max_seen_timestamp_ms - effective_window_ms - self.config.max_lateness_ms
         first_keep = bisect_right(state.timestamps, lower_bound - 1)
         if first_keep <= 0:
             return
@@ -144,7 +145,8 @@ class ObservationBuffer:
         state = self._sessions.get(key)
         if state is None or not state.observations or state.max_seen_timestamp_ms is None:
             return None
-        lower_bound = state.max_seen_timestamp_ms - self.config.position_window_ms
+        effective_window_ms = min(self.config.position_window_ms, self.config.stale_sample_ms)
+        lower_bound = state.max_seen_timestamp_ms - effective_window_ms
         start = bisect_right(state.timestamps, lower_bound - 1)
         current = tuple(state.observations[start:])
         if not current:
