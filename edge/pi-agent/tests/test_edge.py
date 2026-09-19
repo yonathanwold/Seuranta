@@ -130,8 +130,9 @@ class EdgeTests(unittest.TestCase):
                                     device_token="Seuranta-iPhone")
         self.assertEqual(rows, [("Seuranta-iPhone", -58, 37)])
         btmgmt_scan = "\n".join((
-            "hci0 dev_found: aa:bb:cc:dd:ee:ff type LE Random rssi -58 flags 0x00000000 "
-            "AD flags 0x06 name Seuranta-iPhone",
+            "hci0 dev_found: aa:bb:cc:dd:ee:ff type LE Random rssi -58 flags 0x00000000",
+            "AD flags 0x06",
+            "name Seuranta-iPhone",
             "hci0 dev_found: 11:22:33:44:55:66 type LE Random rssi -41 flags 0x00000000 "
             "AD flags 0x06 name Someone-Else",
         ))

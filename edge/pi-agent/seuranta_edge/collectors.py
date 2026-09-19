@@ -230,17 +230,26 @@ def parse_btmgmt_scan(output: str, *, target_name: str, device_token: str,
         raise ValueError("target_name and device_token are required")
     channel = _safe_channel(expected_channel)
     rows: list[tuple[str, int, int]] = []
+    pending_rssi: Optional[int] = None
     for line in output.splitlines():
-        device = _BTMGMT_DEVICE_FOUND.search(_ANSI.sub("", line).strip())
-        if not device:
+        clean = _ANSI.sub("", line).strip()
+        device = _BTMGMT_DEVICE_FOUND.search(clean)
+        if device:
+            rssi = int(device.group("rssi"))
+            if not -127 <= rssi <= 0:
+                raise CollectorError("Bluetooth output contained out-of-range RSSI")
+            # Some BlueZ versions put the EIR name on the next line after a
+            # device-found event; retain only the immediately preceding RSSI.
+            pending_rssi = rssi
+            name = _BTMGMT_NAME.search(device.group("details"))
+            if name and name.group("name").strip() == target_name:
+                rows.append((device_token, rssi, channel))
+                pending_rssi = None
             continue
-        name = _BTMGMT_NAME.search(device.group("details"))
-        if not name or name.group("name").strip() != target_name:
-            continue
-        rssi = int(device.group("rssi"))
-        if not -127 <= rssi <= 0:
-            raise CollectorError("Bluetooth output contained out-of-range RSSI")
-        rows.append((device_token, rssi, channel))
+        name = _BTMGMT_NAME.match(clean)
+        if name and pending_rssi is not None and name.group("name").strip() == target_name:
+            rows.append((device_token, pending_rssi, channel))
+            pending_rssi = None
     return rows
 
 
