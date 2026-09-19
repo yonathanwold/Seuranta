@@ -29,7 +29,15 @@ _ENV_NAMES = {
     "batch_max_size": "BATCH_MAX_SIZE",
     "buffer_path": "BUFFER_PATH",
     "demo_run_secret": "DEMO_RUN_SECRET",
+    "ble_target_name": "BLE_TARGET_NAME",
+    "ble_scan_seconds": "BLE_SCAN_SECONDS",
 }
+
+_REQUIRED_FIELDS = (
+    "anchor_id", "anchor_x", "anchor_y", "anchor_floor", "deployment_id", "building_id", "api_url",
+    "wifi_ssid", "wifi_channel", "wifi_interface", "capture_strategy", "observation_interval_ms",
+    "heartbeat_interval_ms", "batch_max_size", "buffer_path", "demo_run_secret",
+)
 
 
 @dataclass(frozen=True)
@@ -50,6 +58,8 @@ class EdgeConfig:
     batch_max_size: int
     buffer_path: str
     demo_run_secret: str
+    ble_target_name: str = ""
+    ble_scan_seconds: int = 3
 
     def __post_init__(self) -> None:
         errors = self.validation_errors()
@@ -73,8 +83,8 @@ class EdgeConfig:
             errors.append("wifi_ssid must be non-empty and at most 32 characters")
         if not isinstance(self.wifi_channel, int) or isinstance(self.wifi_channel, bool) or not 1 <= self.wifi_channel <= 196:
             errors.append("wifi_channel must be an integer from 1 through 196")
-        if self.capture_strategy not in ("MOCK", "AP_STATIONS", "MONITOR", "AUTO"):
-            errors.append("capture_strategy must be MOCK, AP_STATIONS, MONITOR, or AUTO")
+        if self.capture_strategy not in ("MOCK", "AP_STATIONS", "MONITOR", "BLE", "AUTO"):
+            errors.append("capture_strategy must be MOCK, AP_STATIONS, MONITOR, BLE, or AUTO")
         for name in ("observation_interval_ms", "heartbeat_interval_ms", "batch_max_size"):
             value = getattr(self, name)
             if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
@@ -83,6 +93,11 @@ class EdgeConfig:
             errors.append("buffer_path must be a non-empty path")
         if not isinstance(self.demo_run_secret, str) or len(self.demo_run_secret.encode("utf-8")) < 16:
             errors.append("demo_run_secret must be at least 16 UTF-8 bytes and is never logged")
+        if not isinstance(self.ble_scan_seconds, int) or isinstance(self.ble_scan_seconds, bool) or not 1 <= self.ble_scan_seconds <= 30:
+            errors.append("ble_scan_seconds must be an integer from 1 through 30")
+        if self.capture_strategy == "BLE":
+            if not isinstance(self.ble_target_name, str) or not _SAFE_ID.fullmatch(self.ble_target_name):
+                errors.append(f"ble_target_name must match {_SAFE_ID.pattern} when capture_strategy is BLE")
         return errors
 
     def redacted_diagnostics(self) -> dict[str, Any]:
@@ -90,6 +105,8 @@ class EdgeConfig:
 
         result = {field.name: getattr(self, field.name) for field in fields(self)}
         result["demo_run_secret"] = "<redacted>"
+        if result["ble_target_name"]:
+            result["ble_target_name"] = "<configured>"
         return result
 
     @classmethod
@@ -116,7 +133,7 @@ class EdgeConfig:
             except (TypeError, ValueError) as exc:
                 raise ValueError(f"{name} must be an integer") from exc
 
-        missing = [name for name in _ENV_NAMES if value(name) is None]
+        missing = [name for name in _REQUIRED_FIELDS if value(name) is None]
         if missing:
             raise ValueError("missing configuration values: " + ", ".join(_ENV_NAMES[name] for name in missing))
         return cls(
@@ -127,7 +144,8 @@ class EdgeConfig:
             wifi_interface=str(value("wifi_interface")), capture_strategy=str(value("capture_strategy")).upper(),
             observation_interval_ms=as_int("observation_interval_ms"), heartbeat_interval_ms=as_int("heartbeat_interval_ms"),
             batch_max_size=as_int("batch_max_size"), buffer_path=str(value("buffer_path")),
-            demo_run_secret=str(value("demo_run_secret")),
+            demo_run_secret=str(value("demo_run_secret")), ble_target_name=str(value("ble_target_name", "")),
+            ble_scan_seconds=as_int("ble_scan_seconds") if value("ble_scan_seconds") is not None else 3,
         )
 
 

@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import StrEnum
+import math
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 SCHEMA_VERSION = "1.0"
@@ -30,11 +31,26 @@ class Mode(StrEnum):
     REAL = "real"
     SIMULATED = "simulated"
 
+    @classmethod
+    def _missing_(cls, value: object):
+        # Accept the legacy edge-agent spellings while normalising all stored
+        # API records to the two current modes.
+        if isinstance(value, str):
+            return {"live": cls.REAL, "simulation": cls.SIMULATED, "replay": cls.SIMULATED}.get(value.lower())
+        return None
+
 
 class NodeStatus(StrEnum):
     ONLINE = "online"
     DEGRADED = "degraded"
     OFFLINE = "offline"
+
+    @classmethod
+    def _missing_(cls, value: object):
+        if isinstance(value, str):
+            normalized = value.lower()
+            return next((member for member in cls if member.value == normalized), None)
+        return None
 
 
 class SignalObservation(ContractModel):
@@ -58,6 +74,76 @@ class SignalObservation(ContractModel):
     @classmethod
     def ensure_timezone(cls, value: datetime) -> datetime:
         return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+class AnchorDefinition(ContractModel):
+    """A fixed anchor's location and RSSI calibration.
+
+    ``tx_power_dbm_at_1m`` is the measured RSSI at one metre, not a radio's
+    advertised transmit-power field.  Calibrating this value in the deployed
+    room is essential for a useful range estimate.
+    """
+
+    anchor_id: str = Field(min_length=1, max_length=128)
+    x_m: float
+    y_m: float
+    tx_power_dbm_at_1m: float = Field(default=-59.0, ge=-100, le=0)
+    path_loss_exponent: float = Field(default=2.2, gt=0, le=6)
+
+    @field_validator("x_m", "y_m", "tx_power_dbm_at_1m", "path_loss_exponent")
+    @classmethod
+    def ensure_finite(cls, value: float) -> float:
+        if not math.isfinite(value):
+            raise ValueError("must be finite")
+        return value
+
+
+class RssiPositionRequest(ContractModel):
+    """A one-shot RSSI multilateration request, useful for calibration."""
+
+    window_start: datetime
+    window_end: datetime
+    run_id: str
+    deployment_id: str
+    building_id: str
+    floor_id: str
+    session_id: str
+    source: str = Field(default="ble", min_length=1, max_length=64)
+    anchors: list[AnchorDefinition] = Field(min_length=3, max_length=32)
+    rssi_by_anchor: dict[str, float] = Field(min_length=3)
+    mode: Mode = Mode.REAL
+    sequence_number: int = Field(default=0, ge=0)
+
+    @field_validator("window_start", "window_end")
+    @classmethod
+    def ensure_window_timezone(cls, value: datetime) -> datetime:
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+    @field_validator("rssi_by_anchor")
+    @classmethod
+    def validate_rssi(cls, value: dict[str, float]) -> dict[str, float]:
+        for anchor_id, rssi_dbm in value.items():
+            if not anchor_id:
+                raise ValueError("anchor IDs must not be empty")
+            if not math.isfinite(rssi_dbm) or not -127 <= rssi_dbm <= 0:
+                raise ValueError("RSSI values must be finite dBm values between -127 and 0")
+        return value
+
+    @model_validator(mode="after")
+    def validate_geometry_inputs(self) -> "RssiPositionRequest":
+        if self.window_end < self.window_start:
+            raise ValueError("window_end must not be before window_start")
+        anchor_ids = [anchor.anchor_id for anchor in self.anchors]
+        if len(anchor_ids) != len(set(anchor_ids)):
+            raise ValueError("anchor definitions must have unique anchor_id values")
+        configured = set(anchor_ids)
+        measured = set(self.rssi_by_anchor)
+        unknown = measured - configured
+        if unknown:
+            raise ValueError(f"RSSI supplied for unknown anchors: {', '.join(sorted(unknown))}")
+        if len(configured & measured) < 3:
+            raise ValueError("at least three configured anchors need an RSSI measurement")
+        return self
 
 
 class ObservationBatch(ContractModel):

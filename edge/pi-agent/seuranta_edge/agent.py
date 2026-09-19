@@ -121,6 +121,7 @@ class EdgeAgent:
         self._sent_total = 0
         self._last_observation_at: Optional[str] = None
         self._last_capture_ok = True
+        self._configured_session_published = False
 
     def start_session(self, raw_identifier: str, *, now: Optional[str] = None) -> Session:
         session = self.registry.start(raw_identifier, now=now)
@@ -135,11 +136,12 @@ class EdgeAgent:
         ended = Session(current.session_id, current.run_id, current.deployment_id, current.mode,
                         "ENDED", current.consent_scope, current.started_at, now or utc_now(), current.origin_anchor_id)
         if self.transport:
-            self.transport.end_session(session_id)
+            self.transport.end_session(session_id, ended.last_seen_at)
         self.registry.end(session_id, now=ended.last_seen_at)
         return ended
 
     def collect_once(self) -> list[SignalObservation]:
+        self._ensure_configured_ble_session()
         try:
             raw_observations = self.collector.collect()
         except CollectorError as exc:
@@ -160,7 +162,12 @@ class EdgeAgent:
                 self._heartbeat_errors.add("INACTIVE_SESSION")
                 continue
             self.registry.touch(session.session_id, now=raw.observed_at)
-            source = "MOCK_RSSI" if self.mode == "SIMULATION" else "WIFI_RSSI"
+            if self.mode == "SIMULATION":
+                source = "mock"
+            elif self.config.capture_strategy == "BLE":
+                source = "ble"
+            else:
+                source = "wifi"
             try:
                 observation = SignalObservation(
                     observation_id=str(uuid4()), observed_at=raw.observed_at,
@@ -186,6 +193,21 @@ class EdgeAgent:
         ready = self.batcher.flush_due()
         if ready:
             self._queue_batch(ready)
+
+    def _ensure_configured_ble_session(self) -> None:
+        """Activate the consented BLE target before its first sample arrives."""
+        if self.config.capture_strategy != "BLE" or not self.config.ble_target_name:
+            return
+        session = self.registry.start(self.config.ble_target_name)
+        if not self.transport or self._configured_session_published:
+            return
+        try:
+            self.transport.start_session(session)
+            self._configured_session_published = True
+        except Exception:
+            # Keep the in-memory consent mapping so samples can queue locally;
+            # retry the session announcement on the next collection cycle.
+            self._heartbeat_errors.add("BACKEND_UNAVAILABLE")
 
     def flush_pending_batch(self) -> Optional[ObservationBatch]:
         ready = self.batcher.flush()
@@ -319,13 +341,15 @@ class EdgeAgent:
 def create_collector(config: EdgeConfig) -> ObservationCollector:
     """Select a collector without importing hardware-specific dependencies."""
 
-    from .collectors import APStationCollector, MonitorModeCollector
+    from .collectors import APStationCollector, BLEAdvertisementCollector, MonitorModeCollector
     if config.capture_strategy == "MOCK":
         return MockCollector(channel=config.wifi_channel)
     if config.capture_strategy == "AP_STATIONS":
         return APStationCollector(config.wifi_interface, config.wifi_channel)
     if config.capture_strategy == "MONITOR":
         return MonitorModeCollector(config.wifi_interface, config.wifi_channel)
+    if config.capture_strategy == "BLE":
+        return BLEAdvertisementCollector(config.ble_target_name, scan_seconds=config.ble_scan_seconds)
     # AUTO is conservative: AP station mode is the only mode that can be
     # selected without first changing an interface into monitor mode.
     return APStationCollector(config.wifi_interface, config.wifi_channel)

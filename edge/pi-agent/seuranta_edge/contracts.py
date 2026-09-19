@@ -93,7 +93,7 @@ class SignalObservation:
             raise ValueError("rssi_dbm must be an integer from -127 through 0")
         if not isinstance(self.channel, int) or isinstance(self.channel, bool) or not 1 <= self.channel <= 196:
             raise ValueError("channel must be an integer from 1 through 196")
-        _enum(self.source, "source", ("WIFI_RSSI", "MOCK_RSSI", "SIMULATED_RSSI"))
+        _enum(self.source, "source", ("wifi", "ble", "mock", "WIFI_RSSI", "BLE_RSSI", "MOCK_RSSI", "SIMULATED_RSSI"))
         _enum(self.mode, "mode", ("LIVE", "REPLAY", "SIMULATION"))
         if not isinstance(self.sequence_number, int) or isinstance(self.sequence_number, bool) or self.sequence_number < 0:
             raise ValueError("sequence_number must be a non-negative integer")

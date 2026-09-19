@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -102,3 +103,80 @@ def test_websocket_snapshot_and_delta(client):
         delta = websocket.receive_json()
         assert delta["type"] in {"observation", "anomaly"}
         assert delta["state_revision"] > snapshot["state_revision"]
+
+
+def test_rssi_positioning_endpoint_persists_a_position(client):
+    payload = {
+        "window_start": "2026-01-01T12:00:00Z",
+        "window_end": "2026-01-01T12:00:01Z",
+        "run_id": "run-1",
+        "deployment_id": "dep-1",
+        "building_id": "building-1",
+        "floor_id": "floor-1",
+        "session_id": "iphone-demo",
+        "source": "ble",
+        "mode": "simulated",
+        "anchors": [
+            {"anchor_id": "pi-1", "x_m": 0, "y_m": 0, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+            {"anchor_id": "pi-2", "x_m": 6, "y_m": 0, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+            {"anchor_id": "pi-3", "x_m": 0, "y_m": 4, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+            {"anchor_id": "pi-4", "x_m": 6, "y_m": 4, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+        ],
+        "rssi_by_anchor": {"pi-1": -67, "pi-2": -72, "pi-3": -69, "pi-4": -72},
+    }
+    response = client.post("/api/v1/positioning/estimate", json=payload)
+
+    assert response.status_code == 200
+    estimate = response.json()["data"]
+    assert estimate["position_method"] == "rssi_log_distance_multilateration/ble"
+    assert estimate["observation_count"] == 4
+    assert estimate["anchors_used"] == ["pi-1", "pi-2", "pi-3", "pi-4"]
+    positions = client.get("/api/v1/positions", params={"run_id": "run-1"})
+    assert len(positions.json()["data"]) == 1
+
+
+def test_internal_positioner_writes_a_position_from_four_anchor_observations(tmp_path, monkeypatch):
+    monkeypatch.setenv("SEURANTA_DATABASE_PATH", str(tmp_path / "positioning.db"))
+    monkeypatch.setenv("SEURANTA_INTERNAL_POSITIONING", "true")
+    monkeypatch.setenv("SEURANTA_POSITIONING_WINDOW_SECONDS", "3")
+    monkeypatch.setenv("SEURANTA_POSITIONING_ANCHORS_JSON", json.dumps([
+        {"anchor_id": "pi-1", "x_m": 0, "y_m": 0, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+        {"anchor_id": "pi-2", "x_m": 6, "y_m": 0, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+        {"anchor_id": "pi-3", "x_m": 0, "y_m": 4, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+        {"anchor_id": "pi-4", "x_m": 6, "y_m": 4, "tx_power_dbm_at_1m": -59, "path_loss_exponent": 2},
+    ]))
+    observations = [
+        {**observation("auto-1", 10), "anchor_id": "pi-1", "rssi_dbm": -67, "source": "ble", "channel": 37},
+        {**observation("auto-2", 11), "anchor_id": "pi-2", "rssi_dbm": -72, "source": "ble", "channel": 37},
+        {**observation("auto-3", 12), "anchor_id": "pi-3", "rssi_dbm": -69, "source": "ble", "channel": 37},
+        {**observation("auto-4", 13), "anchor_id": "pi-4", "rssi_dbm": -72, "source": "ble", "channel": 37},
+    ]
+    batch = {"producer_id": "ble-simulator", "batch_sequence": 10, "run_id": "run-1",
+             "deployment_id": "dep-1", "mode": "simulated", "observations": observations}
+
+    with TestClient(app) as configured_client:
+        response = configured_client.post("/api/v1/observations/batch", json=batch)
+        assert response.status_code == 200
+        positions = configured_client.get("/api/v1/positions", params={"run_id": "run-1"})
+        assert len(positions.json()["data"]) == 1
+        position = positions.json()["data"][0]
+        assert position["position_method"] == "rssi_log_distance_multilateration/ble"
+        health = configured_client.get("/api/v1/health").json()
+        assert health["positioning"]["internal"]["status"] == "enabled"
+        assert health["positioning"]["internal"]["emitted"] == 1
+
+
+def test_api_accepts_legacy_edge_mode_and_status_values(client):
+    response = client.post("/api/v1/observations", json={**observation("legacy", 8), "mode": "SIMULATION"})
+    assert response.status_code == 200
+    heartbeat = client.post("/api/v1/nodes/heartbeat", json={
+        "heartbeat_id": "00000000-0000-4000-8000-000000000002",
+        "emitted_at": "2026-01-01T12:00:00Z",
+        "run_id": "run-1", "deployment_id": "dep-1", "building_id": "building-1", "floor_id": "floor-1",
+        "anchor_id": "anchor-1", "node_kind": "REAL", "mode": "LIVE", "status": "ONLINE", "agent_version": "0.1",
+        "uptime_s": 1, "buffer_depth": 0, "observations_sent_total": 0, "last_observation_at": None,
+        "capture_ok": True, "error_codes": [],
+    })
+    assert heartbeat.status_code == 200
+    assert heartbeat.json()["data"]["mode"] == "real"
+    assert heartbeat.json()["data"]["status"] == "online"

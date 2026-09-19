@@ -34,6 +34,21 @@ Required names are `ANCHOR_ID`, `ANCHOR_X`, `ANCHOR_Y`, `ANCHOR_FLOOR`,
 `OBSERVATION_INTERVAL_MS`, `HEARTBEAT_INTERVAL_MS`, `BATCH_MAX_SIZE`,
 `BUFFER_PATH`, and `DEMO_RUN_SECRET`. `validate-config` redacts the secret.
 
+### BLE iPhone positioning mode
+
+Set `CAPTURE_STRATEGY` to `BLE` when a consented iPhone advertises the fixed
+local Bluetooth name in `BLE_TARGET_NAME` (for example `Seuranta-iPhone`).
+`BLE_SCAN_SECONDS` defaults to `3`.  The agent scans only for that exact name,
+keeps Bluetooth addresses in memory only long enough to pair a name and RSSI,
+then HMACs the configured name into the shared run-scoped session ID before
+sending metadata.  It uses the Pi's Bluetooth radio, leaving `wlan0` connected
+to the hotspot for API traffic.
+
+See `example-ble-config.json` and
+[`docs/hardware/star-localization.md`](../../docs/hardware/star-localization.md)
+for the four-anchor layout, API configuration, calibration, and iPhone
+advertising requirements.
+
 ## Privacy boundary
 
 The collectors read signal metadata only. Raw station identifiers are held in

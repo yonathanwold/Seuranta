@@ -20,6 +20,7 @@ from services.data.models import (
     ObservationBatch,
     PositionEstimate,
     QueryRequest,
+    RssiPositionRequest,
     SessionCreate,
     SessionEnd,
     SignalObservation,
@@ -27,6 +28,8 @@ from services.data.models import (
 )
 from services.data.anomalies import detect_anomalies
 from services.data.store import LocalStore
+from services.positioning.engine import PositioningError, RangeMeasurement, estimate_rssi_position
+from services.positioning.runtime import InternalPositioner
 
 from .forwarder import PositioningForwarder
 from .intelligence import answer_query
@@ -43,6 +46,12 @@ class Runtime:
         self.settings = settings
         self.store = LocalStore(settings.database_path, settings.retention_days)
         self.forwarder = PositioningForwarder(settings.positioning_url, settings.positioning_queue_size)
+        self.positioner: InternalPositioner | None = None
+        if settings.internal_positioning_enabled:
+            if not settings.positioning_anchors_json:
+                raise ValueError("SEURANTA_INTERNAL_POSITIONING requires SEURANTA_POSITIONING_ANCHORS_JSON")
+            self.positioner = InternalPositioner.from_json(settings.positioning_anchors_json,
+                                                            settings.positioning_window_seconds)
         self.state_revision = 0
         self.started_at = time.monotonic()
         self.live: LiveManager | None = None
@@ -60,6 +69,15 @@ class Runtime:
         if self.live:
             await self.live.publish({"type": event_type, "state_revision": self.state_revision,
                                      "data": data.model_dump(mode="json") if hasattr(data, "model_dump") else data})
+
+    async def process_positions(self, observations: list[SignalObservation]) -> list[PositionEstimate]:
+        if not self.positioner:
+            return []
+        positions = self.positioner.ingest(observations)
+        for position in positions:
+            if self.store.add_position(position):
+                await self.publish("position", position)
+        return positions
 
 
 def runtime(request: Request) -> Runtime:
@@ -148,6 +166,7 @@ async def create_observation(observation: SignalObservation, rt: Runtime = Depen
     if result["accepted"]:
         rt.forwarder.enqueue(batch)
         await rt.publish("observation", observation)
+        await rt.process_positions([observation])
     return {"data": result}
 
 
@@ -183,6 +202,7 @@ async def create_observation_batch(payload: dict[str, Any], rt: Runtime = Depend
     if result["accepted"]:
         rt.forwarder.enqueue(batch)
         await rt.publish("observations", {"batch_id": batch.batch_id, **result})
+        await rt.process_positions(observations)
         for anomaly in detect_anomalies(rt.store, batch.run_id, batch.deployment_id,
                                         batch.observations[0].building_id, batch.observations[0].floor_id, batch.mode):
             await rt.publish("anomaly", anomaly)
@@ -208,6 +228,47 @@ async def create_position(position: PositionEstimate, rt: Runtime = Depends(runt
 @app.get("/api/v1/positions")
 async def get_positions(params: dict[str, Any] = Depends(list_params), rt: Runtime = Depends(runtime)):
     return {"data": rt.store.list_positions(**params)}
+
+
+@app.post("/api/v1/positioning/estimate")
+async def estimate_position(payload: RssiPositionRequest, rt: Runtime = Depends(runtime)):
+    """Estimate a calibration/test position from a simultaneous RSSI snapshot."""
+    readings = [
+        RangeMeasurement(anchor_id=anchor.anchor_id, x_m=anchor.x_m, y_m=anchor.y_m,
+                         rssi_dbm=payload.rssi_by_anchor[anchor.anchor_id],
+                         tx_power_dbm_at_1m=anchor.tx_power_dbm_at_1m,
+                         path_loss_exponent=anchor.path_loss_exponent)
+        for anchor in payload.anchors if anchor.anchor_id in payload.rssi_by_anchor
+    ]
+    try:
+        result = estimate_rssi_position(readings)
+    except PositioningError as exc:
+        raise HTTPException(422, {"message": str(exc)}) from exc
+    position = PositionEstimate(
+        window_start=payload.window_start,
+        window_end=payload.window_end,
+        run_id=payload.run_id,
+        deployment_id=payload.deployment_id,
+        building_id=payload.building_id,
+        floor_id=payload.floor_id,
+        session_id=payload.session_id,
+        raw_x_m=result.x_m,
+        raw_y_m=result.y_m,
+        x_m=result.x_m,
+        y_m=result.y_m,
+        confidence=result.confidence,
+        accuracy_radius_m=result.accuracy_radius_m,
+        position_method=f"rssi_log_distance_multilateration/{payload.source}",
+        smoothing_method="none",
+        anchors_used=list(result.anchors_used),
+        observation_count=len(readings),
+        mode=payload.mode,
+        sequence_number=payload.sequence_number,
+    )
+    inserted = rt.store.add_position(position)
+    if inserted:
+        await rt.publish("position", position)
+    return {"data": position.model_dump(mode="json"), "duplicate": not inserted}
 
 
 @app.post("/api/v1/events")
@@ -289,9 +350,15 @@ async def intelligence(query: QueryRequest, rt: Runtime = Depends(runtime)):
 
 @app.get("/api/v1/health")
 async def health(rt: Runtime = Depends(runtime)):
+    internal = rt.positioner.status if rt.positioner else None
     return {"status": "ok", "local": {"status": "ok", "database": "sqlite", "wal": True},
             "positioning": {"status": "configured" if rt.forwarder.enabled else "disabled", "queue_depth": rt.forwarder.queue.qsize(),
-                            "forwarded": rt.forwarder.forwarded, "failed": rt.forwarder.failed},
+                            "forwarded": rt.forwarder.forwarded, "failed": rt.forwarder.failed,
+                            "internal": {"status": "enabled" if internal else "disabled",
+                                         "configured_anchors": internal.configured_anchors if internal else 0,
+                                         "emitted": internal.emitted if internal else 0,
+                                         "skipped": internal.skipped if internal else 0,
+                                         "last_error": internal.last_error if internal else None}},
             "databricks": {"status": "configured" if rt.settings.databricks_host and rt.settings.databricks_token else "disabled"}}
 
 

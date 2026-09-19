@@ -9,17 +9,19 @@ from seuranta_edge.agent import BatchAccumulator, EdgeAgent
 from seuranta_edge.buffer import FlushResult, SQLiteBuffer
 from seuranta_edge.collectors import (
     APStationCollector,
+    BLEAdvertisementCollector,
     CommandAdapter,
     MockCollector,
     MonitorModeCollector,
     RawObservation,
     CollectorError,
     parse_station_dump,
+    parse_bluetooth_scan,
 )
 from seuranta_edge.config import EdgeConfig, config_from_defaults, load_config
-from seuranta_edge.contracts import NodeHeartbeat, ObservationBatch, SignalObservation, utc_now
+from seuranta_edge.contracts import NodeHeartbeat, ObservationBatch, Session, SignalObservation, utc_now
 from seuranta_edge.pseudonym import RunPseudonymizer, SessionRegistry
-from seuranta_edge.transport import RecordingTransport, TransportError
+from seuranta_edge.transport import HttpTransport, RecordingTransport, TransportError
 
 
 class FakeAdapter(CommandAdapter):
@@ -28,6 +30,18 @@ class FakeAdapter(CommandAdapter):
 
     def run(self, args, timeout_s=5.0):
         return self.output
+
+
+class CapturingHttpTransport(HttpTransport):
+    def __init__(self):
+        super().__init__("http://api.invalid", building_id="building-1", floor_id="1",
+                         run_id="run-1", deployment_id="dep-1")
+        self.calls = []
+        self.response = {}
+
+    def _request(self, method, path, payload=None):
+        self.calls.append((method, path, payload))
+        return self.response
 
 
 def observation(sequence=0, *, rssi=-50, channel=6):
@@ -48,6 +62,10 @@ class EdgeTests(unittest.TestCase):
             EdgeConfig(**{**config.__dict__, "wifi_channel": 0})
         with self.assertRaises(ValueError):
             EdgeConfig(**{**config.__dict__, "demo_run_secret": "short"})
+        with self.assertRaises(ValueError):
+            EdgeConfig(**{**config.__dict__, "capture_strategy": "BLE"})
+        ble = EdgeConfig(**{**config.__dict__, "capture_strategy": "BLE", "ble_target_name": "Seuranta-iPhone"})
+        self.assertEqual(ble.redacted_diagnostics()["ble_target_name"], "<configured>")
 
     def test_env_config(self):
         config = load_config({
@@ -99,6 +117,46 @@ class EdgeTests(unittest.TestCase):
         self.assertEqual(result[0].rssi_dbm, -55)
         monitor = MonitorModeCollector("mon0", 6, line_source=lambda: ["aa:bb:cc:dd:ee:ff signal -60 dBm channel 6"])
         self.assertEqual(monitor.collect()[0].rssi_dbm, -60)
+
+    def test_bluetooth_collector_uses_only_target_rssi_metadata(self):
+        scan = "\n".join((
+            "[NEW] Device aa:bb:cc:dd:ee:ff Seuranta-iPhone",
+            "[CHG] Device aa:bb:cc:dd:ee:ff RSSI: -58",
+            "[NEW] Device 11:22:33:44:55:66 Someone-Else",
+            "[CHG] Device 11:22:33:44:55:66 RSSI: -41",
+        ))
+        rows = parse_bluetooth_scan(scan, target_name="Seuranta-iPhone", device_token="Seuranta-iPhone")
+        self.assertEqual(rows, [("Seuranta-iPhone", -58, 37)])
+        collector = BLEAdvertisementCollector("Seuranta-iPhone", adapter=FakeAdapter(scan))
+        readings = collector.collect()
+        self.assertEqual([(item.device_token, item.rssi_dbm, item.channel) for item in readings],
+                         [("Seuranta-iPhone", -58, 37)])
+
+    def test_http_transport_normalizes_edge_values_for_the_api(self):
+        transport = CapturingHttpTransport()
+        session = Session("ABCDEF", "run-1", "dep-1", "LIVE", "ACTIVE", "DEMO_NETWORK",
+                          "2026-09-19T00:00:00Z", "2026-09-19T00:00:00Z", "anchor-1")
+        transport.start_session(session)
+        self.assertEqual(transport.calls[-1], ("POST", "/api/v1/sessions", {
+            "session_id": "ABCDEF", "run_id": "run-1", "deployment_id": "dep-1",
+            "building_id": "building-1", "floor_id": "1", "mode": "real",
+            "started_at": "2026-09-19T00:00:00Z",
+        }))
+        batch = ObservationBatch.from_observations("anchor-1", 0, "run-1", "dep-1", "SIMULATION", [observation()])
+        transport.send_batch(batch.to_dict())
+        self.assertEqual(transport.calls[-1][2]["mode"], "simulated")
+        self.assertEqual(transport.calls[-1][2]["observations"][0]["mode"], "simulated")
+        heartbeat = NodeHeartbeat("00000000-0000-4000-8000-000000000002", utc_now(), "run-1", "dep-1", "building-1",
+                                  "1", "anchor-1", "REAL", "LIVE", "ONLINE", "0.1", 1, 0, 0, None, True, ())
+        transport.heartbeat(heartbeat)
+        self.assertEqual(transport.calls[-1][2]["status"], "online")
+        self.assertEqual(transport.calls[-1][2]["mode"], "real")
+
+        transport.response = {"data": [{"session_id": "ABCDEF", "run_id": "run-1", "deployment_id": "dep-1",
+                                         "mode": "real", "started_at": "2026-09-19T00:00:00+00:00", "ended_at": None}]}
+        sessions = transport.list_sessions()
+        self.assertEqual(sessions[0]["mode"], "LIVE")
+        self.assertEqual(sessions[0]["status"], "ACTIVE")
 
     def test_batch_count_and_age(self):
         current = [0.0]

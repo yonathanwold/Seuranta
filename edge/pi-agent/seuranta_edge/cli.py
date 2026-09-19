@@ -19,6 +19,11 @@ def _config(args: argparse.Namespace):
     return load_config(config_file=args.config_file)
 
 
+def _http_transport(config, *, run_id: str):
+    return HttpTransport(config.api_url, building_id=config.building_id, floor_id=config.anchor_floor,
+                         run_id=run_id, deployment_id=config.deployment_id)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="seuranta-edge")
     parser.add_argument("--config-file", help="JSON config path; environment values override it")
@@ -60,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
                               "valid": True}, sort_keys=True))
             return 0
         if args.command == "connectivity":
-            transport = HttpTransport(config.api_url)
+            transport = _http_transport(config, run_id="demo-run")
             print(json.dumps({"sessions": transport.list_sessions(), "reachable": True}, sort_keys=True))
             return 0
         if args.command == "time-sync":
@@ -70,8 +75,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(payload, sort_keys=True))
             return 0 if payload["synchronized"] else 2
         collector = create_collector(config)
-        transport = RecordingTransport() if config.capture_strategy == "MOCK" else HttpTransport(config.api_url)
         run_id = "demo-run"
+        transport = RecordingTransport() if config.capture_strategy == "MOCK" else _http_transport(config, run_id=run_id)
         with SQLiteBuffer(config.buffer_path) as buffer:
             agent = EdgeAgent(config, run_id=run_id, collector=collector, buffer=buffer, transport=transport)
             if config.capture_strategy == "MOCK":
