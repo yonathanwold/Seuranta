@@ -15,7 +15,7 @@ Continue the Seuranta frontend in `https://github.com/yonathanwold/Seuranta.git`
 
 - Repository: `https://github.com/yonathanwold/Seuranta.git`
 - Current branch: `team/app`
-- Latest implementation commit: `db45db9` (`feat(map): add building overview and first-person walkthrough`). Run `git rev-parse --short HEAD` after checkout for the newest docs commit.
+- Latest handoff commit: `73974a9` (`docs(app): add main handoff and Astra V2 brief`). The preceding implementation commit is `db45db9` (`feat(map): add building overview and first-person walkthrough`). Run `git rev-parse --short HEAD` after checkout for the newest commit.
 - Run `git rev-parse HEAD` after checkout for the exact newest handoff commit.
 
 `team/app` is an orphan frontend history. It has no merge base with the three backend team branches. Do not merge those histories into this branch, force-push, or rewrite another team's branch.
