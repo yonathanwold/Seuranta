@@ -15,7 +15,7 @@ src/
     liveProvider.ts   REST snapshot + WebSocket reconnect boundary
     store.ts          small Zustand UI state (selection, filters, layers)
   components/
-    MapCanvas.tsx     R3F scene, camera presets, markers, labels, fallback floor plan
+    MapCanvas.tsx     R3F scene, camera presets, markers, and labels
   App.tsx             shell composition, explorer, detail panel, mode controls
   styles.css          tokens and responsive command-center layout
 ```

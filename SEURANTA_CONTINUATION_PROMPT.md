@@ -38,7 +38,7 @@ These histories are unrelated. Backend changes are out of scope for this fronten
 - `src/domain/floorDefinition.ts`: 32 m × 22 m Riverside Office Floor 2, 0.25 m slab, 0.65 m walls, room/zone polygons, and four anchor coordinates.
 - `src/domain/mockProvider.ts`: five anonymous sessions on believable routes, confidence/accuracy, events, zone occupancy, and mixed anchor status.
 - `src/domain/liveProvider.ts`: `GET /api/v1/state` plus `/api/v1/live` WebSocket with bounded reconnect and last-state preservation.
-- `src/components/MapCanvas.tsx`: R3F floor geometry, OrbitControls, Overview/Top/Focus cameras, entity interpolation, anchors, confidence disc, labels, and WebGL fallback floor plan.
+- `src/components/MapCanvas.tsx`: R3F floor geometry, OrbitControls, Overview/Top/Focus cameras, entity interpolation, anchors, confidence disc, and labels.
 - `src/App.tsx` and `src/styles.css`: operation shell, explorer, synchronized selection/search, detail panel, layer controls, responsive design system.
 - `src/tests/`: coordinate, adapter, and provider unit coverage.
 

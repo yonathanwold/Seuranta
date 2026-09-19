@@ -142,20 +142,9 @@ function FloorScene({ state, selectedId, onSelect, showEntities, showAnchors, sh
   </>
 }
 
-/** A quiet DOM floor-plan fallback keeps the map legible when a browser blocks WebGL. */
-function FallbackPlan({ state, selectedId, showLabels, showZones, showEntities, showAnchors, showConfidence }: Pick<MapCanvasProps, 'state' | 'selectedId' | 'showLabels' | 'showZones' | 'showEntities' | 'showAnchors' | 'showConfidence'>) {
-  return <div className="map-fallback" aria-hidden="true"><div className="fallback-floor">
-    {showZones && demoFloor.rooms.map((room) => <div key={room.roomId} className={`fallback-room tone-${room.tone}`} style={{ left: `${room.xM / demoFloor.widthM * 100}%`, top: `${(1 - (room.yM + room.depthM) / demoFloor.depthM) * 100}%`, width: `${room.widthM / demoFloor.widthM * 100}%`, height: `${room.depthM / demoFloor.depthM * 100}%` }}>{showLabels && <span>{room.label}</span>}</div>)}
-    {showAnchors && demoFloor.anchors.map((anchor) => <span key={anchor.anchorId} className="fallback-anchor" style={{ left: `${anchor.xM / demoFloor.widthM * 100}%`, top: `${(1 - anchor.yM / demoFloor.depthM) * 100}%` }} />)}
-    {showEntities && state.positions.map((position) => <span key={position.sessionId} className={`fallback-entity ${selectedId === position.sessionId ? 'is-selected' : ''}`} style={{ left: `${position.xM / demoFloor.widthM * 100}%`, top: `${(1 - position.yM / demoFloor.depthM) * 100}%` }}>{showConfidence && selectedId === position.sessionId && <i style={{ width: `${Math.max(14, position.accuracyRadiusM / demoFloor.widthM * 1000)}%`, height: `${Math.max(14, position.accuracyRadiusM / demoFloor.depthM * 1000)}%` }} />}</span>)}
-    <div className="fallback-wall wall-top" /><div className="fallback-wall wall-bottom" /><div className="fallback-wall wall-left" /><div className="fallback-wall wall-right" />
-  </div></div>
-}
-
 export function MapCanvas(props: MapCanvasProps) {
   return <div className="map-canvas" aria-label="Interactive 3D floor map">
-    <FallbackPlan {...props} />
-    <Canvas shadows orthographic camera={{ position: [27, 25, 27], zoom: 11, near: 0.1, far: 200 }} gl={{ antialias: true, alpha: true }} onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}>
+    <Canvas shadows orthographic camera={{ position: [27, 25, 27], zoom: 11, near: 0.1, far: 200 }} gl={{ antialias: true }}>
       <FloorScene {...props} />
     </Canvas>
     <div className="map-scale" aria-hidden="true"><span>0</span><i /><span>5</span><i /><span>10 m</span></div>

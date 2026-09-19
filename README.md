@@ -39,7 +39,6 @@ npm run preview
 - An elevated orthographic Three.js/R3F floor with dimensional slab, wall segments, room surfaces, labels, four anchor markers, anonymous moving entities, selected confidence/accuracy disc, hover/selected HTML cards, OrbitControls, and Overview/Top/Focus presets.
 - `MockPositionProvider` with five anonymous sessions, route interpolation, confidence, accuracy radius, zones, transition events, and mixed anchor health.
 - `LivePositionProvider` with REST snapshot loading from `GET /api/v1/state` and a reconnecting WebSocket boundary at `/api/v1/live`. The UI receives only normalized domain state.
-- A DOM floor-plan fallback keeps the map understandable in environments that block WebGL; the R3F scene remains the primary map implementation.
 
 ## Repository guide
 
