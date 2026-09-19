@@ -13,6 +13,7 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from statistics import median
 from uuid import NAMESPACE_URL, uuid5
 
 from services.data.models import AnchorDefinition, Mode, PositionEstimate, SignalObservation, utc_now
@@ -70,6 +71,36 @@ class InternalPositioner:
         return (observation.run_id, observation.deployment_id, observation.building_id, observation.floor_id,
                 observation.session_id, observation.mode, observation.source)
 
+    def _aggregate_scan_observations(
+        self, observations: list[SignalObservation]
+    ) -> list[tuple[tuple[str, str, str, str, str, Mode, str], SignalObservation]]:
+        """Reduce a same-anchor scan to its median RSSI measurement.
+
+        A BLE scan can discover the same consented device several times.  The
+        edge agent gives all discoveries from that scan one timestamp, so
+        retaining only the final packet would make an estimate depend on an
+        arbitrary radio fluctuation.  Keep the newest packet's metadata and
+        replace its RSSI with the scan median instead.
+        """
+
+        grouped: dict[
+            tuple[tuple[str, str, str, str, str, Mode, str], str, datetime],
+            list[SignalObservation],
+        ] = defaultdict(list)
+        for observation in observations:
+            if observation.anchor_id in self._anchors:
+                grouped[(self._key(observation), observation.anchor_id, observation.observed_at)].append(observation)
+
+        aggregated: list[tuple[tuple[str, str, str, str, str, Mode, str], SignalObservation]] = []
+        for (key, _anchor_id, _observed_at), scan in grouped.items():
+            representative = max(scan, key=lambda item: (item.sequence_number, item.observation_id))
+            median_rssi = int(round(median(item.rssi_dbm for item in scan)))
+            if representative.rssi_dbm != median_rssi:
+                representative = representative.model_copy(update={"rssi_dbm": median_rssi})
+            aggregated.append((key, representative))
+
+        return sorted(aggregated, key=lambda item: item[1].observed_at)
+
     def _estimate(self, key: tuple[str, str, str, str, str, Mode, str],
                   observations: list[SignalObservation]) -> PositionEstimate:
         run_id, deployment_id, building_id, floor_id, session_id, mode, source = key
@@ -109,10 +140,7 @@ class InternalPositioner:
 
     def ingest(self, observations: list[SignalObservation]) -> list[PositionEstimate]:
         changed: set[tuple[str, str, str, str, str, Mode, str]] = set()
-        for observation in observations:
-            if observation.anchor_id not in self._anchors:
-                continue
-            key = self._key(observation)
+        for key, observation in self._aggregate_scan_observations(observations):
             current = self._recent[key].get(observation.anchor_id)
             if current is None or observation.observed_at >= current.observed_at:
                 self._recent[key][observation.anchor_id] = observation
