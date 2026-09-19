@@ -1,40 +1,49 @@
-# Seuranta demo guide
+# Demo guide
 
-This is the reliable way to present the current frontend. It uses Simulation mode, so the demo does not depend on a backend or network service.
+Simulation mode is the reliable presentation path. It does not need Wi-Fi, hardware, or a backend.
 
-## Start it
-
-From the repository root:
+## Start the app
 
 ```powershell
 npm.cmd install
 npm.cmd run dev -- --host 127.0.0.1 --port 4173
 ```
 
-Open `http://127.0.0.1:4173/` if Vite uses that port. A normal `npm.cmd run dev` command is also fine; use the URL Vite prints if the port is different.
+Open `http://127.0.0.1:4173/`.
 
-## Judge flow
+## Two-minute walkthrough
 
-The whole walkthrough takes about two minutes:
+1. Start on Overview. Explain that this is a first-floor cutaway of Virginia Tech's Academic Classroom Building and that the model is an estimate, not a survey.
+2. Point out the six anonymous devices and four planned anchors. The devices use routes traced from the supplied floor metadata.
+3. Select `Device A7F3`. Show its coordinates, confidence, uncertainty radius, zone, and update time.
+4. Search for `E5F6`, select it, and press Focus. The camera moves once and then leaves manual control alone.
+5. Switch between Top and Overview. Drag to orbit or pan and scroll to zoom.
+6. Toggle Devices, Anchors, Labels, Uncertainty, or Floor overlay in Map layers.
+7. Pause and resume the simulation. Restart resets the routes. Weak signal lowers one device's confidence and degrades one anchor.
+8. Open Floor setup. Show the floor dimensions, origin, yaw, anchor IDs, anchor coordinates, and exact live scope fields.
+9. Switch to Live. With no API running, the app shows zero devices, planned anchors as offline, and `Live source unavailable`. Switch back to Demo to finish.
 
-1. Start in Simulation mode and point out the floor model, five anonymous device markers, and four anchors. The moving markers update every 700 ms.
-2. Click `Device A7F3` in the left list. Show that the map card and right detail panel follow the same selection.
-3. Type `C4E2` into Search devices, select the result, and show the zone, confidence, accuracy radius, and anchors used.
-4. Click Focus, then select a different device. Focus should move once to the new session. Drag the map afterward to show that manual orbit stays under operator control while telemetry keeps updating.
-5. Click Map layers and toggle Confidence or Zones. Use Top and Overview to show the other camera presets.
-6. If there is time, switch to Live. Without a compatible API it should say `Live source unavailable` and show zero sessions. This is an intentional empty/error state, not a broken simulation.
+## Small pilot checklist
 
-## What to point out
+Before testing with Raspberry Pis in the building:
 
-- The floor is configuration-driven: dimensions, rooms, zones, walls, and anchor positions come from `src/domain/floorDefinition.ts`.
-- The mock provider is shaped like the live provider. Both send normalized state to the same UI.
-- Confidence and accuracy are part of each position estimate, so the selected uncertainty disc is tied to the data rather than being decoration.
-- Session IDs are anonymous and run-scoped. The app is not a people directory.
+1. Measure two known distances on the first floor and update the width and depth if the model scale is off.
+2. Pick a local `(0, 0)` point and confirm which direction backend `x_m` and `y_m` increase.
+3. Enter the installed anchor IDs and measure each anchor from the same origin.
+4. Use the same run, deployment, building, and floor IDs in the backend and Floor setup.
+5. Put a consenting test device at a few known spots and compare the live marker with tape-measured coordinates.
+6. Record the observed error before adjusting confidence or uncertainty settings.
 
-## What not to overclaim
+## Claims we can make
 
-- Simulation is not live sensor data. It is a deterministic local demo with believable routes.
-- The repository does not include the Pi service, positioning service, or data-platform API.
-- Live mode is a documented REST/WebSocket boundary, not a bundled working backend.
-- Replay, analytics pages, settings forms, heatmaps, and personal profiles are not implemented.
-- Exact 1366 × 768 and 1920 × 1080 browser sign-off is still pending because the available QA browser did not expose those viewport overrides.
+- Simulation and Live use the same renderer and domain types.
+- Coordinates are in metres and conversion math is centralized.
+- Scope and revision checks protect the view from stale or cross-floor data.
+- The model is usable offline for the presentation.
+
+## Claims we should not make yet
+
+- The model is not a survey, BIM, or confirmed georeferenced floor plan.
+- Planned anchors are not installed or measured anchors.
+- Simulated confidence is demo data, not a benchmark of the final positioning system.
+- Live mode is ready for the documented API, but this frontend branch does not bundle the Pi, positioning, or data-platform services.

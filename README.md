@@ -1,118 +1,130 @@
 # Seuranta
 
-Seuranta is a web app for exploring anonymous indoor-positioning data on a live 3D floor map. We built it to make the path from Raspberry Pi observations to a useful operator view easier to understand. The app has a real Three.js floor model, a believable local simulation, and a separate boundary for the live API.
+Seuranta is our indoor positioning dashboard. It turns location estimates from anonymous test devices into a live 3D view of a building floor. Our current pilot is the first floor of Virginia Tech's Academic Classroom Building.
 
-The default demo is safe to run without a backend. It shows five anonymous sessions moving around Riverside Office Floor 2, four infrastructure anchors, confidence/accuracy information, and recent zone events. It never displays names, MAC addresses, raw packet payloads, or personal profiles.
+The app starts in Simulation mode, so it is safe to demo without Raspberry Pis, Wi-Fi capture, or a backend. Six anonymous devices move through classrooms and common areas while four planned anchors report simulated health. Live mode uses the same map and UI, but it stays empty and shows an error if a compatible API is not running.
 
-## Try the demo in a few minutes
+## Run it locally
 
-You need Node.js and npm. From the repository root, run:
+You need Node.js and npm. From the repository root:
 
 ```powershell
 npm.cmd install
-npm.cmd run dev
-```
-
-Open the local URL printed by Vite. The app starts in Simulation mode, so there are no credentials or services to configure. For the same command used during local QA, run:
-
-```powershell
 npm.cmd run dev -- --host 127.0.0.1 --port 4173
 ```
 
-The demo starts with an elevated view of a 32 m × 22 m floor. Use the left entity list to select a device or anchor. Selecting a device updates the right detail panel and the marker on the map. Search filters the anonymous sessions. The Overview, Top, and Focus controls change the camera; after using Focus, selecting another device moves the focus once to that device. Drag the map to orbit or pan; scroll to zoom. The Map layers controls turn entities, anchors, labels, confidence discs, and zones on or off.
+Then open `http://127.0.0.1:4173/`.
 
-The Simulation/Live switch is in the left navigation and top bar. Simulation is the reliable presentation path. Live is useful when a Seuranta API is available and otherwise shows an honest unavailable/empty state.
+Other useful commands:
 
-## What is in the app
+```powershell
+npm.cmd test
+npm.cmd run lint
+npm.cmd run build
+npm.cmd run preview
+```
 
-- A configuration-driven Riverside Office floor with rooms, wall segments, zone colors, labels, and four anchor locations.
-- An orthographic Three.js scene with orbit controls, moving session markers, hover/selected labels, anchor health, and selected uncertainty discs.
-- Five anonymous mock sessions that follow smooth corridor and room routes. The mock provider emits confidence, accuracy radius, timestamps, zone transitions, and anchor health.
-- Searchable entity and anchor lists that stay in sync with the map and detail panel.
-- A provider interface shared by Simulation and Live, so the UI does not know whether data came from the mock or API path.
-- A WebGL fallback message. If Canvas cannot start, the DOM lists still provide the last known entity and anchor information.
+On macOS or Linux, use the same commands without `.cmd`.
 
-Replay is not in the mode menu because a replay provider is not implemented yet. Building and floor are the current static demo context.
+## What works
 
-## Connecting the live API
+- A real React Three Fiber scene using the supplied Virginia Tech building model.
+- A first-floor cutaway with orbit, pan, zoom, Overview, Top, Focus, and Reset controls.
+- Six anonymous simulated devices following repeatable routes through learning and circulation spaces.
+- Smooth marker movement, confidence values, uncertainty radius, timestamps, and zone names.
+- Four planned anchor locations with online, degraded, and offline states.
+- Search and linked selection between the device list, 3D map, and details panel.
+- Simulation controls for pause, restart, speed, and a weak-signal scenario.
+- Floor calibration and live API settings stored locally in the browser.
+- A strict live provider for scoped REST snapshots and WebSocket updates.
 
-Set the API base URL before starting Vite:
+The default building footprint is about 76.9 m × 44.6 m. That number comes from the supplied reference model and has roughly ±15% scale uncertainty. It is not a survey or BIM. The setup screen lets us replace the floor dimensions, origin, rotation, anchor IDs, and anchor coordinates after measuring the real site.
+
+## Model files
+
+The model bundle is in `public/models/`:
+
+```text
+vt-academic-classroom.glb           reliable default used by the app
+vt-academic-classroom.meshopt.glb   smaller optimized copy for later use
+vt-academic-classroom.metadata.json source notes, estimated bounds, rooms, and openings
+```
+
+We use the uncompressed GLB right now because it opens without extra decoder setup. The Meshopt copy is kept for a later performance pass. The app only shows `Floor_01`; the upper floors and roof are still present in the source model.
+
+## Simulation and live data
+
+Both modes feed the same normalized frontend objects. React components do not import mock fixtures directly.
+
+```text
+MockPositionProvider ─┐
+                      ├─> normalized state ─> map, lists, details, metrics
+LivePositionProvider ─┘
+```
+
+The live provider calls:
+
+```text
+GET /api/v1/state
+WS  /api/v1/live
+```
+
+Both requests include `run_id`, `deployment_id`, `building_id`, `floor_id`, and mode. The default Virginia Tech scope is:
+
+```text
+run_id:        vt-acb-floor1
+deployment_id: vt-acb-pilot
+building_id:   vt-academic-classroom-building
+floor_id:      floor-1
+```
+
+You can set the API URL in Floor setup or before starting Vite:
 
 ```powershell
 $env:VITE_SEURANTA_API_URL = "http://127.0.0.1:8000"
 npm.cmd run dev
 ```
 
-The live provider calls `GET /api/v1/state` and opens `WS /api/v1/live`. Both requests carry `run_id`, `deployment_id`, `building_id`, `floor_id`, and a data-platform mode value (`real` for Live or `simulated` for Simulation). Reconnects include `since_revision` when possible. WebSocket messages are reduced by type instead of being treated as whole state objects:
+Live snapshots and updates must match all four scope IDs. Old revisions, malformed messages, and cross-floor data are ignored. Switching scopes clears the old view immediately. Live mode never quietly falls back to simulation.
+
+The future pipeline is:
 
 ```text
-{ type, state_revision, data }
-```
-
-Position, node, and event messages must contain all four matching scope fields. Missing, cross-scope, malformed, or unknown-mode messages are ignored. `snapshot_required` triggers a fresh REST snapshot. The provider keeps the last good state while it reconnects.
-
-The frontend is not a backend replacement. The intended data path is:
-
-```text
-Raspberry Pi heartbeat and observation batches
+Raspberry Pi observations and heartbeats
   -> data API
-  -> positioning (WKNN, smoothing, zone events)
-  -> data-platform state and analytics
-  -> GET /api/v1/state + WS /api/v1/live
+  -> positioning and smoothing
+  -> floor state and events
+  -> REST snapshot + WebSocket updates
   -> Seuranta
 ```
-
-See [the architecture notes](docs/frontend-architecture.md) for the full field contract and the differences between the existing edge, positioning, and data-platform branches.
 
 ## Project layout
 
 ```text
 src/
+  components/MapCanvas.tsx   3D floor, camera, anchors, and device markers
   domain/
-    types.ts            normalized UI contracts
-    adapters.ts         snake_case DTO -> normalized camelCase state
-    coordinates.ts      backend metre <-> Three.js transform
-    floorDefinition.ts  demo rooms, walls, zones, and anchors
-    mockProvider.ts     five-session local simulation
-    liveProvider.ts     scoped REST/WS adapter and typed delta reducer
-    camera.ts           one-shot camera behavior for selection changes
-    store.ts            small Zustand UI store
-  components/
-    MapCanvas.tsx       R3F floor, markers, controls, and fallback
-  App.tsx               shell, explorer, detail panel, and mode switching
-  styles.css            visual tokens and desktop layout
+    adapters.ts              backend DTOs to frontend types
+    coordinates.ts           metres, origin, axes, and rotation
+    floorDefinition.ts       Virginia Tech floor identity and planned anchors
+    roomModel.ts             model asset, calibration, and saved setup
+    simulation.ts            first-floor routes and zone names
+    mockProvider.ts          local demo state
+    liveProvider.ts          scoped REST/WebSocket connection
+    types.ts                 normalized domain contracts
+  App.tsx                    dashboard shell and interactions
+  styles.css                layout and visual system
 docs/
   frontend-architecture.md
   demo-guide.md
 ```
 
-The top-level [continuation handoff](SEURANTA_CONTINUATION_PROMPT.md) records the current branch, checks, limitations, and safe workflow.
+## Privacy
 
-## Commands
+The demo uses IDs such as `session-a7f3`. Do not add names, MAC addresses, raw packet contents, or personal profiles to fixtures, logs, screenshots, or UI components. We are demonstrating spatial analytics, not building a people directory.
 
-Windows users can use `npm.cmd`; ordinary npm commands work as well.
+## Current checks and limits
 
-```text
-npm.cmd install
-npm.cmd run dev
-npm.cmd run dev -- --host 127.0.0.1 --port 4173
-npm.cmd test
-npm.cmd run lint
-npm.cmd run build
-npm.cmd audit --omit=dev
-npm.cmd run preview
-```
+ESLint, all 20 tests, and the production build pass. We manually checked the main flow at 1366×768 and 1920×1080. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
 
-The matching ordinary commands are `npm install`, `npm run dev`, `npm test`, `npm run lint`, `npm run build`, `npm audit --omit=dev`, and `npm run preview`.
-
-## Privacy boundary
-
-The UI only uses run-scoped anonymous session IDs such as `session-a7f3`. Keep raw MAC addresses, personal names, packet contents, and other personal identifiers out of fixtures, logs, screenshots, and UI components. The floor configuration is about spaces and anchors, not people.
-
-## Current status and limits
-
-Automated checks currently pass with 6 test files and 16 tests. ESLint passes, the TypeScript/Vite production build passes, and `npm.cmd audit --omit=dev` reports no production vulnerabilities. The build still prints the normal advisory that the Three.js bundle is larger than 500 kB.
-
-We manually checked the local app in Chrome at the available 1440 px-wide desktop viewport: simulation movement, search, linked selection, layers, camera presets, Focus retargeting, manual orbit persistence, Live unavailable state, and the browser console. Exact 1366 × 768 and 1920 × 1080 viewport overrides were not available in that browser tool, so those two sizes remain a follow-up check. No backend is bundled, so Live mode is expected to be empty or unavailable until a compatible API is running.
-
-For a short, repeatable presentation path, read [docs/demo-guide.md](docs/demo-guide.md). For changes, read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+The model scale and upper floors are estimated, the planned anchor positions have not been surveyed, and no Raspberry Pi service is bundled with this branch. Read [docs/demo-guide.md](docs/demo-guide.md) before presenting and [docs/frontend-architecture.md](docs/frontend-architecture.md) before connecting a backend.

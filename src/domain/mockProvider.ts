@@ -1,28 +1,23 @@
 import type { NodeHeartbeat, NormalizedState, PositionEstimate, PositionProvider, ProviderSnapshot, SpatialEvent } from './types'
 import { demoFloor } from './floorDefinition'
+import { roomDimensions, type RoomModelConfig, defaultRoomConfig } from './roomModel'
+import { routeForConfig, sessionZones, simulationRoutes, zoneNames, type SimulationScenario } from './simulation'
 
-const sessionIds = ['session-a7f3', 'session-b9d1', 'session-c4e2', 'session-d8f6', 'session-e1a9']
-const routePoints: Array<Array<[number, number]>> = [
-  [[5.5, 11.2], [11, 11.2], [18, 11.2], [22, 13], [24.5, 16.5], [21.5, 13]],
-  [[8.5, 12.7], [12.5, 12.7], [15.5, 12.7], [15.5, 6], [12.5, 6], [10.5, 12.5]],
-  [[4.8, 5.6], [8.2, 5.6], [11, 10.8], [18.5, 10.8], [20.5, 6], [17.8, 5.4]],
-  [[19, 17], [23, 17], [27, 17], [27, 12], [23.5, 11], [18.8, 12]],
-  [[25, 5.5], [23.5, 8.5], [19, 10], [14, 10], [8.5, 11], [6.5, 16.5]],
-]
-
-const nowIso = () => new Date().toISOString()
-const interpolate = (route: Array<[number, number]>, phase: number): [number, number] => {
-  const scaled = phase * (route.length - 1)
-  const index = Math.min(route.length - 2, Math.floor(scaled))
-  const amount = scaled - index
-  const start = route[index]
-  const end = route[index + 1]
-  return [start[0] + (end[0] - start[0]) * amount, start[1] + (end[1] - start[1]) * amount]
+export interface SimulationControls {
+  playing: boolean
+  speed: number
+  scenario: SimulationScenario
 }
 
-const zoneFor = (x: number, y: number): string | null => {
-  const room = demoFloor.rooms.find((candidate) => x >= candidate.xM && x <= candidate.xM + candidate.widthM && y >= candidate.yM && y <= candidate.yM + candidate.depthM)
-  return room?.zoneId ?? (y >= 9.2 && y <= 15.2 ? 'corridor' : null)
+const sessionIds = Object.keys(simulationRoutes)
+const nowIso = () => new Date().toISOString()
+const interpolate = (route: Array<[number, number]>, phase: number): [number, number] => {
+  const scaled = phase * route.length
+  const index = Math.floor(scaled) % route.length
+  const amount = scaled - index
+  const start = route[index]
+  const end = route[(index + 1) % route.length]
+  return [start[0] + (end[0] - start[0]) * amount, start[1] + (end[1] - start[1]) * amount]
 }
 
 export class MockPositionProvider implements PositionProvider {
@@ -32,54 +27,101 @@ export class MockPositionProvider implements PositionProvider {
   private tick = 0
   private revision = 0
   private events: SpatialEvent[] = []
-  private previousZones = new Map<string, string | null>()
+  private readonly roomConfig: RoomModelConfig
+  private controls: SimulationControls = { playing: true, speed: 1, scenario: 'walkthrough' }
+  private lastGeneratedAt = nowIso()
+
+  constructor(roomConfig: RoomModelConfig = defaultRoomConfig) { this.roomConfig = roomConfig }
 
   start(listener: (snapshot: ProviderSnapshot) => void): void {
     this.listener = listener
+    this.controls.playing = true
     listener({ state: this.createState(), providerStatus: 'live' })
-    this.timer = setInterval(() => this.emit(), 700)
+    this.startTimer()
   }
 
-  stop(): void { if (this.timer) clearInterval(this.timer); this.timer = undefined; this.listener = undefined }
-  async refresh(): Promise<void> { this.emit() }
+  stop(): void { this.clearTimer(); this.listener = undefined }
+  async refresh(): Promise<void> { if (this.controls.playing) this.emit() }
+  getSimulationControls(): SimulationControls { return { ...this.controls } }
 
-  private emit(): void { this.tick += 1; this.revision += 1; this.listener?.({ state: this.createState(), providerStatus: 'live' }) }
+  setPlaying(playing: boolean): void {
+    this.controls.playing = playing
+    if (playing) this.startTimer(); else this.clearTimer()
+    this.emit()
+  }
+
+  setSpeed(speed: number): void {
+    this.controls.speed = Math.min(2, Math.max(0.25, speed))
+    if (this.controls.playing) this.startTimer()
+    this.emit()
+  }
+
+  setScenario(scenario: SimulationScenario): void {
+    this.controls.scenario = scenario
+    this.events = []
+    this.revision += 1
+    this.emit()
+  }
+
+  restart(): void {
+    this.tick = 0
+    this.revision += 1
+    this.events = []
+    this.emit()
+  }
+
+  private startTimer(): void {
+    this.clearTimer()
+    this.timer = setInterval(() => this.emit(), Math.round(700 / this.controls.speed))
+  }
+
+  private clearTimer(): void { if (this.timer) clearInterval(this.timer); this.timer = undefined }
+  private emit(): void {
+    if (this.controls.playing) this.tick += 1
+    this.revision += 1
+    this.listener?.({ state: this.createState(), providerStatus: 'live' })
+  }
 
   private createState(): NormalizedState {
-    const generatedAt = nowIso()
+    const generatedAt = this.controls.playing || this.tick === 0 ? nowIso() : this.lastGeneratedAt
+    this.lastGeneratedAt = generatedAt
+    const dimensions = roomDimensions(this.roomConfig)
     const positions: PositionEstimate[] = sessionIds.map((sessionId, index) => {
-      const phase = ((this.tick * 0.008 + index * 0.17) % 1)
-      const [xM, yM] = interpolate(routePoints[index], phase)
-      const zoneId = zoneFor(xM, yM)
-      const previousZone = this.previousZones.get(sessionId)
-      if (previousZone !== undefined && previousZone !== zoneId && zoneId) {
-        this.events = [{
-          eventId: `${sessionId}-${this.tick}`, eventType: 'ZONE_ENTERED', occurredAt: generatedAt, emittedAt: generatedAt,
-          runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId,
-          mode: 'SIMULATION' as const, sessionId, zoneId, fromZoneId: previousZone ?? undefined, toZoneId: zoneId, eventSequence: this.tick,
-          confidence: 0.86 - index * 0.04, metadata: {},
-        }, ...this.events].slice(0, 7)
-      }
-      this.previousZones.set(sessionId, zoneId)
+      const route = routeForConfig(sessionId, this.roomConfig)
+      const phase = ((this.tick * 0.009 + index * 0.24) % 1)
+      const [xM, yM] = interpolate(route, phase)
+      const weakSignal = this.controls.scenario === 'weak-signal' && index === 1
+      const confidence = Math.max(0.42, (weakSignal ? 0.62 : 0.91) - index * 0.045)
+      const accuracyRadiusM = weakSignal ? 1.25 : 0.45 + index * 0.12
       return {
         schemaVersion: '1.0', positionId: `${sessionId}-${this.tick}`, calculatedAt: generatedAt, windowStart: generatedAt, windowEnd: generatedAt,
         runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId, sessionId,
-        rawXM: xM + Math.sin(this.tick * 0.1 + index) * 0.12, rawYM: yM + Math.cos(this.tick * 0.11 + index) * 0.12, xM, yM, zoneId,
-        confidence: 0.91 - index * 0.055, accuracyRadiusM: 0.8 + index * 0.18, positionMethod: 'mock-route', smoothingMethod: 'EMA',
-        anchorsUsed: ['a-01', 'a-02', 'a-03'].slice(0, index % 2 === 0 ? 3 : 2), observationCount: 10 + index, mode: 'SIMULATION', sequenceNumber: this.tick, isOutsideMap: false,
+        rawXM: xM + Math.sin(this.tick * 0.1 + index) * 0.14, rawYM: yM + Math.cos(this.tick * 0.11 + index) * 0.14, xM, yM, zoneId: sessionZones[sessionId],
+        confidence, accuracyRadiusM, positionMethod: 'demo-route', smoothingMethod: 'EMA', anchorsUsed: this.roomConfig.anchors.slice(0, index === 1 ? 2 : 4).map((anchor) => anchor.anchorId), observationCount: 8 + index,
+        mode: 'SIMULATION', sequenceNumber: this.tick, isOutsideMap: xM < 0 || xM > dimensions.widthM || yM < 0 || yM > dimensions.depthM,
       }
     })
-    const statuses: NodeHeartbeat['status'][] = ['online', 'degraded', 'online', 'degraded']
-    const nodes: NodeHeartbeat[] = demoFloor.anchors.map((anchor, index) => ({
-      schemaVersion: '1.0', heartbeatId: `heartbeat-${anchor.anchorId}-${this.tick}`, emittedAt: generatedAt, runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment',
-      buildingId: demoFloor.buildingId, floorId: demoFloor.floorId, anchorId: anchor.anchorId, nodeKind: 'wifi-monitor', mode: 'SIMULATION', status: statuses[index],
-      agentVersion: 'mock-1.0', uptimeS: 86400 + this.tick * 2, bufferDepth: statuses[index] === 'degraded' ? 7 : 0, observationsSentTotal: 18024 + this.tick,
-      lastObservationAt: generatedAt, captureOk: statuses[index] !== 'offline', errorCodes: statuses[index] === 'degraded' ? ['BUFFER_BACKLOG'] : [],
-    }))
+    if (this.tick === 1 && this.events.length === 0) {
+      this.events = positions.map((position, index) => ({
+        eventId: `${position.sessionId}-started`, eventType: 'SESSION_STARTED', occurredAt: generatedAt, emittedAt: generatedAt,
+        runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId,
+        mode: 'SIMULATION' as const, sessionId: position.sessionId, zoneId: position.zoneId ?? undefined, toZoneId: position.zoneId ?? undefined, eventSequence: index + 1, confidence: position.confidence, metadata: { source: 'simulation' },
+      }))
+    }
+    const weakAnchor = this.controls.scenario === 'weak-signal' ? 'vt-acb-02' : undefined
+    const nodes: NodeHeartbeat[] = this.roomConfig.anchors.map((anchor, index) => {
+      const degraded = weakAnchor === anchor.anchorId
+      return {
+        schemaVersion: '1.0', heartbeatId: `heartbeat-${anchor.anchorId}-${this.tick}`, emittedAt: generatedAt, runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment',
+        buildingId: demoFloor.buildingId, floorId: demoFloor.floorId, anchorId: anchor.anchorId, nodeKind: 'planned-anchor', mode: 'SIMULATION', status: degraded ? 'degraded' : 'online',
+        agentVersion: 'mock-1.0', uptimeS: 1800 + this.tick * 2, bufferDepth: degraded ? 12 : 0, observationsSentTotal: 1200 + this.tick * 3 + index,
+        lastObservationAt: generatedAt, captureOk: !degraded, errorCodes: degraded ? ['WEAK_SIGNAL'] : [],
+      }
+    })
     return {
       stateRevision: this.revision, generatedAt, deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId, runId: 'demo-run-2026-09-19', mode: 'SIMULATION',
-      counts: { activeSessions: positions.length, anchorsOnline: 2, anchorsDegraded: 2, eventsLastHour: 14 }, positions, nodes, zones: demoFloor.zones.map((zone) => ({ zoneId: zone.zoneId, occupancy: positions.filter((position) => position.zoneId === zone.zoneId).length, dwellSeconds: 82 + zone.zoneId.length * 9, status: positions.some((position) => position.zoneId === zone.zoneId) ? 'active' : 'clear' })), recentEvents: this.events,
-      isPartial: false,
+      counts: { activeSessions: positions.length, anchorsOnline: nodes.filter((node) => node.status === 'online').length, anchorsDegraded: nodes.filter((node) => node.status === 'degraded').length, eventsLastHour: this.events.length },
+      positions, nodes, zones: Object.entries(zoneNames).map(([zoneId]) => ({ zoneId, occupancy: positions.filter((position) => position.zoneId === zoneId).length, dwellSeconds: Math.round(this.tick * 0.7), status: 'active' })), recentEvents: this.events.slice(0, 8), isPartial: false,
     }
   }
 }

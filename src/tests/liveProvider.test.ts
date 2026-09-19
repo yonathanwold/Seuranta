@@ -47,6 +47,7 @@ class FakeWebSocket {
   close() { this.onclose?.() }
   open() { this.onopen?.() }
   send(type: string, data: unknown, stateRevision: number) { this.onmessage?.({ data: JSON.stringify({ type, state_revision: stateRevision, data }) }) }
+  sendRaw(message: unknown) { this.onmessage?.({ data: JSON.stringify(message) }) }
 }
 
 describe('live provider', () => {
@@ -82,6 +83,7 @@ describe('live provider', () => {
   })
 
   it('maps a normalized simulation scope to the data API mode vocabulary', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ...snapshot(), data: { ...snapshot().data, mode: 'simulated' } }) })
     const provider = new LivePositionProvider({ ...scope, mode: 'SIMULATION' })
     provider.start(() => undefined)
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1))
@@ -102,9 +104,9 @@ describe('live provider', () => {
     expect(states.at(-1)).toEqual({ revision: 7, positionX: 9, nodes: 2, events: 1 })
     socket.send('position', { session_id: '' }, 8)
     socket.send('unknown-message', { state_revision: 'not-a-number' }, 9)
-    expect(states.at(-1)).toEqual({ revision: 9, positionX: 9, nodes: 2, events: 1 })
+    expect(states.at(-1)).toEqual({ revision: 7, positionX: 9, nodes: 2, events: 1 })
     socket.send('heartbeat', {}, 8)
-    expect(states.at(-1)?.revision).toBe(9)
+    expect(states.at(-1)?.revision).toBe(8)
     provider.stop()
   })
 
@@ -158,6 +160,21 @@ describe('live provider', () => {
     await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1))
     FakeWebSocket.instances[0].close()
     expect(states.at(-1)).toEqual({ status: 'reconnecting', revision: 4 })
+    provider.stop()
+  })
+
+  it('clears old state on start and rejects stale or cross-scope updates', async () => {
+    const provider = new LivePositionProvider(scope)
+    const states: Array<{ status: string; revision: number; x: number }> = []
+    provider.start(({ state, providerStatus }) => states.push({ status: providerStatus, revision: state.stateRevision, x: state.positions[0]?.xM ?? -1 }))
+    expect(states[0]).toEqual({ status: 'connecting', revision: 0, x: -1 })
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1))
+    const socket = FakeWebSocket.instances[0]
+    socket.send('snapshot', { ...snapshot(5).data, floor_id: 'wrong-floor' }, 5)
+    socket.send('position', position('session-a', 99), 3)
+    expect(states.at(-1)).toMatchObject({ revision: 4, x: 4 })
+    socket.sendRaw({ type: 'heartbeat', state_revision: 5 })
+    expect(states.at(-1)).toMatchObject({ status: 'live', revision: 5, x: 4 })
     provider.stop()
   })
 })

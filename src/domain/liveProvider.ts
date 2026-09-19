@@ -4,6 +4,7 @@ import type { NormalizedMode, NormalizedState, PositionProvider, ProviderSnapsho
 const apiBase = (import.meta.env.VITE_SEURANTA_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
 export interface LiveScope {
+  apiUrl?: string
   runId: string
   deploymentId: string
   buildingId: string
@@ -14,7 +15,7 @@ export interface LiveScope {
 type WireMessage = { type?: unknown; state_revision?: unknown; data?: unknown }
 type WireRecord = Record<string, unknown>
 
-const defaultScope: LiveScope = { runId: 'demo-run-2026-09-19', deploymentId: 'demo-deployment', buildingId: 'riverside-office', floorId: 'floor-2', mode: 'LIVE' }
+const defaultScope: LiveScope = { runId: 'vt-acb-floor1', deploymentId: 'vt-acb-pilot', buildingId: 'vt-academic-classroom-building', floorId: 'floor-1', mode: 'LIVE' }
 const initialState = (scope: LiveScope): NormalizedState => adaptState({ data: { state_revision: 0, generated_at: new Date().toISOString(), run_id: scope.runId, deployment_id: scope.deploymentId, building_id: scope.buildingId, floor_id: scope.floorId, positions: [], nodes: [], recent_events: [], zone_metrics: [], counts: {}, is_partial: true, mode: scope.mode ?? 'LIVE' } })
 const isRecord = (value: unknown): value is WireRecord => Boolean(value && typeof value === 'object' && !Array.isArray(value))
 const isStatePayload = (value: unknown): value is WireRecord => isRecord(value) && (typeof value.state_revision === 'number' || Array.isArray(value.positions) || Array.isArray(value.nodes) || Array.isArray(value.recent_events))
@@ -31,51 +32,77 @@ export class LivePositionProvider implements PositionProvider {
   private retryTimer: ReturnType<typeof setTimeout> | undefined
   private retryMs = 1000
   private refreshInFlight = false
+  private refreshController: AbortController | undefined
   private state: NormalizedState
   private stopped = true
+  private generation = 0
   private readonly scope: LiveScope
+  private readonly baseUrl: string
 
   constructor(scope: Partial<LiveScope> = {}) {
     this.scope = { ...defaultScope, ...scope }
+    this.baseUrl = this.scope.apiUrl?.replace(/\/$/, '') || apiBase
     this.state = initialState(this.scope)
   }
 
   start(listener: (snapshot: ProviderSnapshot) => void): void {
+    this.generation += 1
+    this.refreshController?.abort()
+    this.refreshController = undefined
+    this.clearRetryTimer()
+    const oldSocket = this.socket
+    this.socket = undefined
+    oldSocket?.close()
+    this.refreshInFlight = false
     this.listener = listener
     this.stopped = false
     this.retryMs = 1000
+    this.state = initialState(this.scope)
+    this.emit('connecting')
     void this.refresh()
   }
 
   stop(): void {
+    this.generation += 1
     this.stopped = true
-    if (this.retryTimer) clearTimeout(this.retryTimer)
-    this.retryTimer = undefined
-    this.socket?.close()
+    this.refreshController?.abort()
+    this.refreshController = undefined
+    this.clearRetryTimer()
+    const socket = this.socket
     this.socket = undefined
+    socket?.close()
+    this.refreshInFlight = false
     this.listener = undefined
   }
 
   async refresh(forceFull = false): Promise<void> {
     if (this.stopped || this.refreshInFlight) return
+    const generation = this.generation
+    const controller = new AbortController()
+    this.refreshController = controller
     this.refreshInFlight = true
     try {
-      const response = await fetch(`${apiBase}/api/v1/state?${this.scopeParams(forceFull)}`)
+      const response = await fetch(`${this.baseUrl}/api/v1/state?${this.scopeParams(forceFull)}`, { signal: controller.signal })
+      if (generation !== this.generation || this.stopped) return
       if (!response.ok) throw new Error(`State request returned ${response.status}`)
       const payload = unwrapData(await response.json())
-      if (!isStatePayload(payload)) throw new Error('State response was malformed')
+      if (!isStatePayload(payload) || !this.hasMatchingWireScope(payload)) throw new Error('State response was malformed or outside the configured scope')
       const next = adaptState(payload, this.state)
-      next.stateRevision = Math.max(next.stateRevision, this.state.stateRevision)
+      if (next.stateRevision < this.state.stateRevision) return
       if (!(next.isPartial && !this.state.isPartial && next.positions.length === 0 && next.nodes.length === 0)) this.state = next
       this.clearRetryTimer()
       this.retryMs = 1000
       this.emit('live')
       this.connectSocket()
     } catch (error) {
+      if (generation !== this.generation || this.stopped || (error instanceof DOMException && error.name === 'AbortError')) return
       this.emit(this.state.stateRevision ? 'reconnecting' : 'error', error instanceof Error ? error.message : 'Unable to load live state')
       this.scheduleReconnect()
     } finally {
-      this.refreshInFlight = false
+      if (generation === this.generation) {
+        this.refreshInFlight = false
+        this.refreshController = undefined
+      }
     }
   }
 
@@ -86,7 +113,7 @@ export class LivePositionProvider implements PositionProvider {
   }
 
   private socketUrl(): string {
-    const base = apiBase ? new URL(apiBase, window.location.href) : new URL(window.location.href)
+    const base = this.baseUrl ? new URL(this.baseUrl, window.location.href) : new URL(window.location.href)
     base.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:'
     base.pathname = `${base.pathname.replace(/\/$/, '')}/api/v1/live`
     base.search = this.scopeParams().toString()
@@ -95,12 +122,14 @@ export class LivePositionProvider implements PositionProvider {
 
   private connectSocket(): void {
     if (this.stopped || this.socket) return
+    const generation = this.generation
     const socket = new WebSocket(this.socketUrl())
     this.socket = socket
-    socket.onopen = () => { this.retryMs = 1000; this.emit('live') }
-    socket.onmessage = (event) => this.handleMessage(event.data)
-    socket.onerror = () => socket.close()
+    socket.onopen = () => { if (generation !== this.generation || this.socket !== socket) return; this.retryMs = 1000; this.emit('live') }
+    socket.onmessage = (event) => { if (generation === this.generation && this.socket === socket) this.handleMessage(event.data) }
+    socket.onerror = () => { if (generation === this.generation && this.socket === socket) socket.close() }
     socket.onclose = () => {
+      if (generation !== this.generation || this.socket !== socket) return
       this.socket = undefined
       if (!this.stopped) { this.emit('reconnecting'); this.scheduleReconnect() }
     }
@@ -116,15 +145,25 @@ export class LivePositionProvider implements PositionProvider {
     const type = typeof message.type === 'string' ? message.type : ''
     const revision = revisionOf(message.state_revision)
     if (type === 'snapshot_required') {
-      this.socket?.close()
+      const socket = this.socket
+      this.socket = undefined
+      this.clearRetryTimer()
+      socket?.close()
       void this.refresh(true)
+      return
+    }
+    if (type === 'heartbeat' || type === 'observation' || type === 'observations') {
+      if (revision !== undefined && revision >= this.state.stateRevision) {
+        this.state = revision > this.state.stateRevision ? { ...this.state, stateRevision: revision } : this.state
+        this.emit('live')
+      }
       return
     }
     if (type === 'snapshot' || type === 'state') {
       const snapshot = unwrapData(message.data)
-      if (!isStatePayload(snapshot)) return
+      if (revision === undefined || revision < this.state.stateRevision || !isStatePayload(snapshot) || !this.hasMatchingWireScope(snapshot)) return
       const next = adaptState(snapshot, this.state)
-      if (revision !== undefined) next.stateRevision = Math.max(next.stateRevision, revision)
+      next.stateRevision = revision
       if (!(next.isPartial && !this.state.isPartial && next.positions.length === 0 && next.nodes.length === 0)) this.state = next
       this.emit('live')
       return
@@ -132,39 +171,35 @@ export class LivePositionProvider implements PositionProvider {
     const data = unwrapData(message.data)
     if (!isRecord(data)) return
     if (type === 'position') {
-      if (!this.hasMatchingWireScope(data) || typeof data.session_id !== 'string' || !data.session_id || typeof data.x_m !== 'number' || typeof data.y_m !== 'number') return
+      if (revision === undefined || revision < this.state.stateRevision || !this.hasMatchingWireScope(data) || typeof data.session_id !== 'string' || !data.session_id || typeof data.x_m !== 'number' || typeof data.y_m !== 'number') return
       const position = adaptPosition(data)
       if (!this.inScope(position.runId, position.deploymentId, position.buildingId, position.floorId)) return
       const positions = this.replaceBy(this.state.positions, position.sessionId, position, (item) => item.sessionId)
-      this.state = { ...this.state, stateRevision: Math.max(this.state.stateRevision, revision ?? this.state.stateRevision), generatedAt: position.calculatedAt, positions, counts: { ...this.state.counts, activeSessions: positions.length } }
+      this.state = { ...this.state, stateRevision: revision, generatedAt: position.calculatedAt, positions, counts: { ...this.state.counts, activeSessions: positions.length } }
       this.emit('live')
       return
     }
     if (type === 'node') {
-      if (!this.hasMatchingWireScope(data) || typeof data.anchor_id !== 'string' || !data.anchor_id) return
+      if (revision === undefined || revision < this.state.stateRevision || !this.hasMatchingWireScope(data) || typeof data.anchor_id !== 'string' || !data.anchor_id) return
       const node = adaptNode(data)
       if (!this.inScope(node.runId, node.deploymentId, node.buildingId, node.floorId)) return
       const nodes = this.replaceBy(this.state.nodes, node.anchorId, node, (item) => item.anchorId)
       const anchorsOnline = nodes.filter((item) => item.status === 'online').length
       const anchorsDegraded = nodes.filter((item) => item.status === 'degraded').length
-      this.state = { ...this.state, stateRevision: Math.max(this.state.stateRevision, revision ?? this.state.stateRevision), generatedAt: node.emittedAt, nodes, counts: { ...this.state.counts, anchorsOnline, anchorsDegraded } }
+      this.state = { ...this.state, stateRevision: revision, generatedAt: node.emittedAt, nodes, counts: { ...this.state.counts, anchorsOnline, anchorsDegraded } }
       this.emit('live')
       return
     }
     if (type === 'event') {
-      if (!this.hasMatchingWireScope(data) || typeof data.event_id !== 'string' || !data.event_id || typeof data.event_type !== 'string' || !data.event_type) return
+      if (revision === undefined || revision < this.state.stateRevision || !this.hasMatchingWireScope(data) || typeof data.event_id !== 'string' || !data.event_id || typeof data.event_type !== 'string' || !data.event_type) return
       const eventValue = adaptEvent(data)
       if (!this.inScope(eventValue.runId, eventValue.deploymentId, eventValue.buildingId, eventValue.floorId)) return
-      this.state = { ...this.state, stateRevision: Math.max(this.state.stateRevision, revision ?? this.state.stateRevision), generatedAt: eventValue.emittedAt, recentEvents: [eventValue, ...this.state.recentEvents.filter((item) => item.eventId !== eventValue.eventId)].slice(0, 25) }
+      this.state = { ...this.state, stateRevision: revision, generatedAt: eventValue.emittedAt, recentEvents: [eventValue, ...this.state.recentEvents.filter((item) => item.eventId !== eventValue.eventId)].slice(0, 25) }
       this.emit('live')
       return
     }
-    if (type === 'observation' || type === 'observations' || type === 'heartbeat') {
-      if (revision !== undefined) this.state = { ...this.state, stateRevision: Math.max(this.state.stateRevision, revision) }
-      this.emit('live')
-      return
-    }
-    if (revision !== undefined && revision > this.state.stateRevision) { this.state = { ...this.state, stateRevision: revision }; this.emit('live') }
+    // Unknown message types are intentionally ignored. A revision on an
+    // unknown payload must not make an untrusted message appear accepted.
   }
 
   private hasMatchingWireScope(data: WireRecord): boolean {

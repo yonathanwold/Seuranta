@@ -1,142 +1,134 @@
 # Frontend architecture
 
-This document is the short version of how the Seuranta frontend fits together. The main idea is simple: backend DTOs stop at one adapter boundary, and everything after that uses the same normalized UI types. That lets the map work with the mock provider today and with the live API later.
+The frontend has one main rule: backend and simulation data must cross a provider boundary before reaching React. Everything after that boundary uses the normalized types in `src/domain/types.ts`.
 
-## Folders and responsibilities
+## Main modules
 
 ```text
 src/
   domain/
-    types.ts            organization/site/building/floor, positions, events, nodes, state, providers
-    adapters.ts         snake_case DTO -> normalized camelCase state
-    coordinates.ts      backend metre <-> Three.js world conversion
-    floorDefinition.ts  Riverside Office rooms, walls, zones, and anchors
-    mockProvider.ts     deterministic five-session simulation
-    liveProvider.ts     scoped REST/WS adapter and typed delta reducer
-    camera.ts           one-shot camera behavior for selection changes
-    store.ts            Zustand selection, search, mode, and layer state
+    types.ts            normalized positions, nodes, events, state, and providers
+    adapters.ts         snake_case backend payloads to camelCase frontend objects
+    coordinates.ts      floor metres to Three.js world coordinates and back
+    floorDefinition.ts  building/floor identity, footprint, zones, and anchors
+    roomModel.ts        GLB information, calibration, validation, and local storage
+    simulation.ts       Virginia Tech first-floor routes and zone names
+    mockProvider.ts     deterministic simulation snapshots and controls
+    liveProvider.ts     scoped REST snapshot and WebSocket update client
+    camera.ts           one-shot Focus behavior
+    store.ts            selected entity, search, layers, and mode
   components/
-    MapCanvas.tsx       R3F floor, markers, labels, controls, and fallback
-  App.tsx               shell, explorer, detail panel, and provider switching
-  styles.css            design tokens and desktop layout
-docs/
-  frontend-architecture.md
-  demo-guide.md
+    MapCanvas.tsx       R3F model, markers, labels, lighting, and camera controls
+  App.tsx               dashboard panels, setup, details, and provider switching
 ```
 
-`App` picks a provider from the selected mode and subscribes to a `ProviderSnapshot`. The map and lists do not care which provider produced it. The mock emits a new snapshot every 700 ms. Marker movement happens in R3F `useFrame`, so the render loop does not need a whole-app state update for every interpolation step.
+`App` creates either `MockPositionProvider` or `LivePositionProvider`. Both emit `ProviderSnapshot`, so the map, lists, metrics, and detail panel do not know where the data came from. Marker interpolation runs inside the Three.js frame loop instead of causing a React render for every visual step.
 
-The adapter is the normalized UI boundary. Wire names stay snake_case; components and the store use names such as `sessionId`, `accuracyRadiusM`, and `recentEvents`. If a backend response changes shape, fix the adapter or provider rather than teaching each component another DTO format.
+## Virginia Tech floor model
 
-## PositionEstimate V1
+The runtime model is `public/models/vt-academic-classroom.glb`. The source also includes a Meshopt-compressed copy and a metadata JSON file. The app uses the uncompressed file because it is only about 0.5 MB and does not need a decoder.
 
-The positioning/data-platform payload uses this exact field set:
+The source contains three floors and a roof. `MapCanvas` clones the loaded scene and removes `Floor_02`, `Floor_03`, and `Roof` from the operational view. The original files stay unchanged.
+
+Metadata says:
+
+```text
+units: metres
+up axis: +Y
+ground plane: XZ
+estimated first-floor bounds: 76.9195 m × 44.6473 m
+scale uncertainty: about ±15%
+measured survey: false
+```
+
+Floor setup can replace width, depth, yaw, origin, and planned anchor coordinates. These settings are validated and stored in local storage under a Virginia Tech-specific key.
+
+## Coordinate system
+
+The live API sends floor-local coordinates:
+
+```text
+x_m: horizontal floor axis
+y_m: floor depth axis
+```
+
+One Three.js unit equals one metre. `coordinates.ts` centers the configured floor, maps backend X to world X, maps backend Y to world -Z, and uses world Y for height. Model scale is applied only to the GLB. Position and anchor coordinates are not scaled a second time.
+
+Default floor coordinates run from `(0, 0)` to approximately `(76.92, 44.65)`. `originXM` and `originYM` let a real deployment use a different backend origin, while `yawDeg` aligns the model with the deployment axes. All markers, anchors, and overlays use the same transform.
+
+## Position contract
+
+The frontend expects positioning records with these wire fields:
 
 ```text
 schema_version, position_id, calculated_at, window_start, window_end,
 run_id, deployment_id, building_id, floor_id, session_id,
-raw_x_m, raw_y_m, x_m, y_m, zone_id, confidence (0..1),
+raw_x_m, raw_y_m, x_m, y_m, zone_id, confidence,
 accuracy_radius_m, position_method, smoothing_method, anchors_used,
 observation_count, mode, sequence_number, is_outside_map
 ```
 
-The normalized `PositionEstimate` uses:
+`confidence` is normalized to 0..1. `accuracy_radius_m` is a radius in metres, not a plus/minus guarantee. The adapter clamps invalid ranges before UI components receive them.
+
+Node heartbeats need the same scope plus:
 
 ```text
-schemaVersion, positionId, calculatedAt, windowStart, windowEnd,
-runId, deploymentId, buildingId, floorId, sessionId,
-rawXM, rawYM, xM, yM, zoneId, confidence, accuracyRadiusM,
-positionMethod, smoothingMethod, anchorsUsed, observationCount,
-mode, sequenceNumber, isOutsideMap
+anchor_id, node_kind, mode, status, emitted_at, uptime_s,
+buffer_depth, observations_sent_total, last_observation_at,
+capture_ok, error_codes
 ```
 
-The adapter clamps confidence to 0..1 and keeps accuracy non-negative. Session IDs remain anonymous and run-scoped.
+Heartbeat payloads report health. Anchor coordinates come from Floor setup because the current heartbeat contract does not include installed coordinates.
 
-## Other data types
+## Live provider
 
-The node heartbeat carries the scope and health information needed by the explorer:
-
-```text
-building_id, floor_id, anchor_id, node_kind,
-mode, status (online | degraded | offline), emitted_at,
-uptime_s, buffer_depth, observations_sent_total,
-last_observation_at, capture_ok, error_codes
-```
-
-The normalized node also keeps the schema version, heartbeat ID, deployment/run IDs, and optional agent version. `FloorDefinition` supplies the anchor coordinates because current heartbeat and observation payloads do not.
-
-Spatial events include an event ID/type, timestamps, scope, mode, optional session/position/zone fields, event sequence, and metadata. The adapter accepts both `metadata` and positioning's `attributes`, and understands `from_zone_id` and `to_zone_id`. Current event types include zone/room enter and exit, dwell lifecycle events, occupancy changes, session start/end, position updates, and anomalies.
-
-The data-platform state snapshot can include `state_revision`, `generated_at`, `counts`, `sessions`, `positions`, `nodes`, `zones`, `zone_metrics`, `recent_events`, `anomalies`, and `is_partial`. The frontend currently renders positions, nodes, zone metrics, recent events, and counts.
-
-## REST and WebSocket boundary
-
-The live provider uses these routes:
+The provider uses:
 
 ```text
 GET /api/v1/state
 WS  /api/v1/live
 ```
 
-Both requests are scoped with `run_id`, `deployment_id`, `building_id`, `floor_id`, and a data-platform mode query value. Normalized `LIVE` maps to `real`; normalized `SIMULATION` maps to `simulated`. A reconnect includes `since_revision` when the provider has a revision. A `snapshot_required` message forces a full scoped REST refresh.
+Both are scoped by `run_id`, `deployment_id`, `building_id`, `floor_id`, and mode. UI mode `LIVE` maps to API mode `real`; `SIMULATION` maps to `simulated`.
 
-The REST adapter accepts either a bare snapshot or a `{ data: ... }` envelope. The WebSocket protocol is treated as typed messages rather than as partial copies of `BuildingState`:
+WebSocket messages use:
 
 ```text
 { type, state_revision, data }
 ```
 
-`snapshot` and `state` replace the usable snapshot. `position` updates one session by `session_id`, `node` updates one anchor by `anchor_id`, and `event` adds or replaces one recent event by `event_id`. Observation and heartbeat messages can advance the revision but do not replace normalized state. Unknown, malformed, missing-scope, cross-scope, and unknown-mode deltas are ignored, so one bad message cannot wipe the last good view. Reconnects use bounded backoff and retain that last view.
+- `snapshot` and `state` replace the current scoped snapshot.
+- `position`, `node`, and `event` update one record.
+- data-less `heartbeat` and observation messages can advance the revision.
+- `snapshot_required` closes the socket and fetches a full REST snapshot.
 
-The existing branches do not use exactly one vocabulary yet:
+Full snapshots and typed updates must match all four scope IDs. Lower revisions are ignored. Starting a new scope emits an empty connecting state immediately, aborts the older fetch, and guards socket callbacks with a generation number. A failed source remains visibly failed; it never switches to mock data.
 
-- Edge commonly uses uppercase `LIVE`, `REPLAY`, and `SIMULATION`, plus uppercase health statuses.
-- Data-platform payloads use lowercase `real` and `simulated` in places.
-- Some edge sessions routes return a bare array while data responses use `{ data: ... }`.
-- Data-platform observation forwarding can include a full `ObservationBatch`, while positioning's accepted shape is narrower (`schema_version` plus `observations`).
-- Positioning events may put zone changes in event fields while data-platform events may put them in `metadata`.
+## Simulation provider
 
-`adapters.ts` maps `REAL`/`PRODUCTION` to `LIVE`, `REPLAY`/`HISTORICAL` to `REPLAY`, and simulated variants to `SIMULATION`. The UI only exposes Simulation and Live because no replay provider exists. These compatibility rules stay in the frontend adapter; this branch does not modify any backend.
+The simulation uses six anonymous sessions. Routes are loops traced inside first-floor learning and circulation regions from the supplied metadata. Each snapshot includes positions, confidence, uncertainty radius, timestamps, zone occupancy, events, and node health. Pause stops timestamps and movement, Restart resets route progress, and Weak signal changes confidence and anchor health.
 
-## Floor definition and coordinates
+The simulation is intentionally believable but not presented as measured positioning performance.
 
-The demo floor is configured in `src/domain/floorDefinition.ts`:
+## Raspberry Pi integration
 
-- 32 m wide × 22 m deep
-- 0.25 m slab
-- 0.65 m wall height
-- seven labeled rooms, zone polygons, wall segments, and four anchors
-
-The floor origin in backend coordinates is its center, `(16 m, 11 m)`. One world unit equals one metre. Backend `x_m` maps to Three.js world `x`; backend `y_m` maps to world `-z`, which makes north read upward in the elevated view. Three.js world `y` is vertical height. The inverse conversion is in the same module for UI-to-map work. Components should call `coordinates.ts` and should not repeat these formulas.
-
-## Providers and mode switching
-
-`PositionProvider` exposes `start`, `stop`, and `refresh`, and always emits the same `ProviderSnapshot` shape.
-
-- `MockPositionProvider` is the default. It uses five anonymous session IDs, smooth waypoint routes, timestamps, confidence, accuracy radius, zone transitions, and four anchors with mixed health.
-- `LivePositionProvider` uses the scoped REST/WebSocket boundary above. It reports connecting, live, reconnecting, and error states without hiding an empty or unavailable source.
-
-The app selects the provider from the mode in the Zustand store. The same map, search, detail panel, and layer controls are used for both. `VITE_SEURANTA_API_URL` can point to a separately hosted API; leaving it unset uses same-origin routes.
-
-## Camera and fallback behavior
-
-Overview, Top, and Focus are explicit camera requests. Manual OrbitControls input cancels an active transition. Selecting a different session while Focus is active creates one new request for that session; normal 700 ms telemetry ticks never move the camera. If WebGL cannot initialize, the Canvas fallback explains what happened while the entity and anchor lists remain available in the DOM.
-
-## Pi to UI path
-
-The intended connection is:
+The frontend integration point is the data API, not direct Pi networking:
 
 ```text
-Pi observations and node heartbeats
-  -> data API (/api/v1/observations, /api/v1/nodes/heartbeat)
-  -> positioning (WKNN, smoothing, and zone events)
-  -> data-platform state reconstruction and analytics
-  -> GET /api/v1/state + WS /api/v1/live
-  -> normalized Seuranta UI state
+Pi observations and heartbeats
+  -> data-platform ingestion
+  -> positioning, smoothing, and zone events
+  -> state reconstruction
+  -> REST + WebSocket live provider
+  -> normalized frontend state
 ```
 
-The frontend assumes the public V1 fields above. It does not assume raw identifiers, names, personal profiles, or unsupported analytics surfaces. Until the backend contracts converge, the adapter owns wrapper, casing, status, event-attribute, scope, partial-snapshot, and revision tolerance.
+The frontend does not implement packet capture, device identity, calibration math for the positioning engine, or Raspberry Pi deployment.
 
 ## Current limits
 
-There is no backend service in this repository, so Live mode cannot show real data by itself. Building and floor are static demo context, and Replay is not implemented. The current browser QA environment provided a 1440 px-wide viewport but no exact 1366 × 768 or 1920 × 1080 override. The production bundle also has the normal Three.js chunk-size advisory. These are follow-up items, not hidden claims in the UI.
+- The Virginia Tech geometry and scale are reference-derived estimates.
+- Upper-floor operational views are not implemented yet, although the model contains them.
+- Planned anchors need a site survey before live testing.
+- Replay and heatmaps are not implemented.
+- The Three.js bundle triggers Vite's chunk-size advisory, but the build completes.

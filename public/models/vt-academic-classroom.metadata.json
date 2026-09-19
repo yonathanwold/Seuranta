@@ -1,0 +1,4122 @@
+{
+  "schema_version": "1.0",
+  "asset": "vt-academic-classroom.glb",
+  "units": "meters",
+  "up_axis": "+Y",
+  "measured": false,
+  "calibration": {
+    "schema_version": "1.0",
+    "meters_per_pixel": 0.078,
+    "origin_pixel": [
+      605,
+      420
+    ],
+    "scale_confidence": "medium",
+    "scale_uncertainty_fraction": 0.15,
+    "story_levels_m": [
+      0,
+      4.5,
+      9.5,
+      14.5
+    ],
+    "parapet_m": 15.65,
+    "tower_m": 21.3
+  },
+  "estimated_bounds_m": {
+    "min": [
+      -38.46199828386307,
+      -0.2594306766986847,
+      -22.346000283956528
+    ],
+    "max": [
+      38.45750121772289,
+      21.299999952316284,
+      22.3013159558177
+    ],
+    "size": [
+      76.91949950158596,
+      21.55943062901497,
+      44.64731623977423
+    ]
+  },
+  "estimated_main_footprint_m2": 2282.786766,
+  "estimated_vestibule_m2": 69.990336,
+  "published_gross_area_m2": 6826.050864000001,
+  "published_principal_stories": 3,
+  "nominal_north_facade_modules": 20,
+  "first_floor_room_regions": 24,
+  "enclosed_stair_locations": 3,
+  "open_stair_locations": 1,
+  "mesh_nodes": 180,
+  "box_instances": 2616,
+  "estimated_rendered_triangles": 33660,
+  "file_bytes": 508408,
+  "extensions": [
+    "EXT_mesh_gpu_instancing"
+  ],
+  "external_dependencies": [],
+  "confidence_levels": {
+    "high": "Source-visible topology / first-floor traced boundaries, not measured dimensions",
+    "medium": "Repeated modules and dimension estimates",
+    "low": "Unseen upper envelope, tower registration and roof closures"
+  },
+  "known_limitations": [
+    "Not a measured survey or BIM. Global scale is estimated with approximately ±15% uncertainty.",
+    "2013 plan and renderings precede the completed building. Tower registration and unobserved elevations cannot be uniquely resolved.",
+    "Twenty long-elevation opening modules follow the first-floor plan. Exact upper opening correspondence is inferred.",
+    "Upper-floor footprints follow the first-floor outline conservatively; upper room plans are not reconstructed.",
+    "Flat site datum; site grading and georeferencing are unknown.",
+    "Hokie Stone is represented by a neutral PBR material, without unique photographic texture.",
+    "Return stair locations are traced; flight construction, risers and guards are simplified estimates."
+  ],
+  "references": {
+    "plan": "User-supplied EYP first-floor plan, 2013-05-14, 1280x880",
+    "renderings": "Two user-supplied exterior perspective renderings",
+    "photographs": "https://wmjordan.com/projects/virginia-tech-academic-classroom-building/",
+    "reviewed_gallery_images": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  "openings": [
+    {
+      "id": "perimeter_15_door_1",
+      "a": [
+        1095,
+        329.53846153846155
+      ],
+      "b": [
+        1095,
+        356.46153846153845
+      ],
+      "sill_m": 0,
+      "head_m": 2.7,
+      "width_m": 2.1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_19_door_1",
+      "a": [
+        917.1492712306833,
+        450.062858060697
+      ],
+      "b": [
+        918.4507287693166,
+        462.817141939303
+      ],
+      "sill_m": 0,
+      "head_m": 2.3,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_1",
+      "a": [
+        863.6976639346984,
+        577.2502195550096
+      ],
+      "b": [
+        847.7423360653016,
+        578.7497804449904
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_2",
+      "a": [
+        830.4476639346983,
+        580.3752195550096
+      ],
+      "b": [
+        814.4923360653016,
+        581.8747804449904
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_3",
+      "a": [
+        797.1976639346983,
+        583.5002195550096
+      ],
+      "b": [
+        781.2423360653016,
+        584.9997804449904
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_4",
+      "a": [
+        763.9476639346983,
+        586.6252195550096
+      ],
+      "b": [
+        747.9923360653016,
+        588.1247804449904
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_5",
+      "a": [
+        730.6976639346983,
+        589.7502195550096
+      ],
+      "b": [
+        714.7423360653016,
+        591.2497804449904
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_6",
+      "a": [
+        697.4476639346983,
+        592.8752195550096
+      ],
+      "b": [
+        681.4923360653016,
+        594.3747804449905
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_7",
+      "a": [
+        664.1976639346983,
+        596.0002195550096
+      ],
+      "b": [
+        648.2423360653016,
+        597.4997804449905
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_22_window_8",
+      "a": [
+        630.9476639346983,
+        599.1252195550096
+      ],
+      "b": [
+        614.9923360653015,
+        600.6247804449905
+      ],
+      "sill_m": 0.85,
+      "head_m": 3.5,
+      "width_m": 1.25,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_23_door_1",
+      "a": [
+        455.3997369301961,
+        615.9615637567119
+      ],
+      "b": [
+        428.6002630698039,
+        618.5384362432881
+      ],
+      "sill_m": 0,
+      "head_m": 2.5,
+      "width_m": 2.1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_25_door_1",
+      "a": [
+        299.3044748327105,
+        610.5150403974839
+      ],
+      "b": [
+        276.29552516728944,
+        612.2849596025162
+      ],
+      "sill_m": 0,
+      "head_m": 2.4,
+      "width_m": 1.8,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_32_door_1",
+      "a": [
+        136.4413538611354,
+        456.27105653260577
+      ],
+      "b": [
+        133.5586461388646,
+        432.72894346739423
+      ],
+      "sill_m": 0,
+      "head_m": 3.2,
+      "width_m": 1.85,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_34_window_1",
+      "a": [
+        145.43879060522372,
+        408.6396268592021
+      ],
+      "b": [
+        143.8612093947763,
+        390.76037314079787
+      ],
+      "sill_m": 0.45,
+      "head_m": 3.6,
+      "width_m": 1.4,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_34_window_2",
+      "a": [
+        143.0087906052237,
+        381.09962685920215
+      ],
+      "b": [
+        141.4312093947763,
+        363.22037314079785
+      ],
+      "sill_m": 0.45,
+      "head_m": 3.6,
+      "width_m": 1.4,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_34_window_3",
+      "a": [
+        140.57879060522373,
+        353.5596268592021
+      ],
+      "b": [
+        139.00120939477628,
+        335.6803731407979
+      ],
+      "sill_m": 0.45,
+      "head_m": 3.6,
+      "width_m": 1.4,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_36_door_1",
+      "a": [
+        120,
+        310.7302564102564
+      ],
+      "b": [
+        120,
+        297.9097435897436
+      ],
+      "sill_m": 0,
+      "head_m": 2.35,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "perimeter_36_door_2",
+      "a": [
+        120,
+        223.9302564102564
+      ],
+      "b": [
+        120,
+        211.10974358974357
+      ],
+      "sill_m": 0,
+      "head_m": 2.35,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_1_window_1",
+      "a": [
+        192.3974358974359,
+        146
+      ],
+      "b": [
+        205.60256410256412,
+        146
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_1_window_2",
+      "a": [
+        223.3974358974359,
+        146
+      ],
+      "b": [
+        236.60256410256412,
+        146
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_1_window_3",
+      "a": [
+        262.3974358974359,
+        146
+      ],
+      "b": [
+        275.60256410256414,
+        146
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_1_window_4",
+      "a": [
+        298.3974358974359,
+        146
+      ],
+      "b": [
+        311.60256410256414,
+        146
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_2_window_1",
+      "a": [
+        189.51282051282053,
+        146
+      ],
+      "b": [
+        208.4871794871795,
+        146
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_2_window_2",
+      "a": [
+        220.51282051282053,
+        146
+      ],
+      "b": [
+        239.4871794871795,
+        146
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_2_window_3",
+      "a": [
+        259.51282051282055,
+        146
+      ],
+      "b": [
+        278.4871794871795,
+        146
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_2_window_4",
+      "a": [
+        295.51282051282055,
+        146
+      ],
+      "b": [
+        314.48717948717956,
+        146
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_3_window_1",
+      "a": [
+        189.51282051282053,
+        146
+      ],
+      "b": [
+        208.4871794871795,
+        146
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_3_window_2",
+      "a": [
+        220.51282051282053,
+        146
+      ],
+      "b": [
+        239.4871794871795,
+        146
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_3_window_3",
+      "a": [
+        259.51282051282055,
+        146
+      ],
+      "b": [
+        278.4871794871795,
+        146
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_0_floor_3_window_4",
+      "a": [
+        295.51282051282055,
+        146
+      ],
+      "b": [
+        314.48717948717956,
+        146
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_2_floor_1_window_1",
+      "a": [
+        337.3974358974359,
+        141
+      ],
+      "b": [
+        350.6025641025641,
+        141
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_2_floor_1_window_2",
+      "a": [
+        372.3974358974359,
+        141
+      ],
+      "b": [
+        385.6025641025641,
+        141
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_2_floor_2_window_1",
+      "a": [
+        334.5128205128205,
+        141
+      ],
+      "b": [
+        353.4871794871795,
+        141
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_2_floor_2_window_2",
+      "a": [
+        369.5128205128205,
+        141
+      ],
+      "b": [
+        388.48717948717945,
+        141
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_2_floor_3_window_1",
+      "a": [
+        334.5128205128205,
+        141
+      ],
+      "b": [
+        353.4871794871795,
+        141
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_2_floor_3_window_2",
+      "a": [
+        369.5128205128205,
+        141
+      ],
+      "b": [
+        388.48717948717945,
+        141
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_1",
+      "a": [
+        412.3974358974359,
+        150
+      ],
+      "b": [
+        425.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_2",
+      "a": [
+        447.3974358974359,
+        150
+      ],
+      "b": [
+        460.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_3",
+      "a": [
+        487.3974358974359,
+        150
+      ],
+      "b": [
+        500.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_4",
+      "a": [
+        522.3974358974359,
+        150
+      ],
+      "b": [
+        535.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_5",
+      "a": [
+        559.3974358974359,
+        150
+      ],
+      "b": [
+        572.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_6",
+      "a": [
+        596.3974358974359,
+        150
+      ],
+      "b": [
+        609.6025641025642,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_7",
+      "a": [
+        634.3974358974359,
+        150
+      ],
+      "b": [
+        647.6025641025642,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_1_window_8",
+      "a": [
+        670.3974358974359,
+        150
+      ],
+      "b": [
+        683.6025641025642,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_1",
+      "a": [
+        409.5128205128205,
+        150
+      ],
+      "b": [
+        428.4871794871795,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_2",
+      "a": [
+        444.5128205128205,
+        150
+      ],
+      "b": [
+        463.4871794871795,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_3",
+      "a": [
+        484.51282051282055,
+        150
+      ],
+      "b": [
+        503.4871794871795,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_4",
+      "a": [
+        519.5128205128206,
+        150
+      ],
+      "b": [
+        538.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_5",
+      "a": [
+        556.5128205128206,
+        150
+      ],
+      "b": [
+        575.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_6",
+      "a": [
+        593.5128205128206,
+        150
+      ],
+      "b": [
+        612.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_7",
+      "a": [
+        631.5128205128206,
+        150
+      ],
+      "b": [
+        650.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_2_window_8",
+      "a": [
+        667.5128205128206,
+        150
+      ],
+      "b": [
+        686.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_1",
+      "a": [
+        409.5128205128205,
+        150
+      ],
+      "b": [
+        428.4871794871795,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_2",
+      "a": [
+        444.5128205128205,
+        150
+      ],
+      "b": [
+        463.4871794871795,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_3",
+      "a": [
+        484.51282051282055,
+        150
+      ],
+      "b": [
+        503.4871794871795,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_4",
+      "a": [
+        519.5128205128206,
+        150
+      ],
+      "b": [
+        538.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_5",
+      "a": [
+        556.5128205128206,
+        150
+      ],
+      "b": [
+        575.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_6",
+      "a": [
+        593.5128205128206,
+        150
+      ],
+      "b": [
+        612.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_7",
+      "a": [
+        631.5128205128206,
+        150
+      ],
+      "b": [
+        650.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_4_floor_3_window_8",
+      "a": [
+        667.5128205128206,
+        150
+      ],
+      "b": [
+        686.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_6_floor_1_window_1",
+      "a": [
+        711.3974358974359,
+        141
+      ],
+      "b": [
+        724.6025641025641,
+        141
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_6_floor_1_window_2",
+      "a": [
+        746.3974358974359,
+        141
+      ],
+      "b": [
+        759.6025641025641,
+        141
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_6_floor_2_window_1",
+      "a": [
+        708.5128205128206,
+        141
+      ],
+      "b": [
+        727.4871794871794,
+        141
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_6_floor_2_window_2",
+      "a": [
+        743.5128205128206,
+        141
+      ],
+      "b": [
+        762.4871794871794,
+        141
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_6_floor_3_window_1",
+      "a": [
+        708.5128205128206,
+        141
+      ],
+      "b": [
+        727.4871794871794,
+        141
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_6_floor_3_window_2",
+      "a": [
+        743.5128205128206,
+        141
+      ],
+      "b": [
+        762.4871794871794,
+        141
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_1_window_1",
+      "a": [
+        784.3974358974359,
+        150
+      ],
+      "b": [
+        797.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_1_window_2",
+      "a": [
+        820.3974358974359,
+        150
+      ],
+      "b": [
+        833.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_1_window_3",
+      "a": [
+        859.3974358974359,
+        150
+      ],
+      "b": [
+        872.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_1_window_4",
+      "a": [
+        895.3974358974359,
+        150
+      ],
+      "b": [
+        908.6025641025641,
+        150
+      ],
+      "sill_m": 0.4,
+      "head_m": 3.05,
+      "width_m": 1.03,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_2_window_1",
+      "a": [
+        781.5128205128206,
+        150
+      ],
+      "b": [
+        800.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_2_window_2",
+      "a": [
+        817.5128205128206,
+        150
+      ],
+      "b": [
+        836.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_2_window_3",
+      "a": [
+        856.5128205128206,
+        150
+      ],
+      "b": [
+        875.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_2_window_4",
+      "a": [
+        892.5128205128206,
+        150
+      ],
+      "b": [
+        911.4871794871794,
+        150
+      ],
+      "sill_m": 4.98,
+      "head_m": 8.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_3_window_1",
+      "a": [
+        781.5128205128206,
+        150
+      ],
+      "b": [
+        800.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_3_window_2",
+      "a": [
+        817.5128205128206,
+        150
+      ],
+      "b": [
+        836.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_3_window_3",
+      "a": [
+        856.5128205128206,
+        150
+      ],
+      "b": [
+        875.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "long_elevation_8_floor_3_window_4",
+      "a": [
+        892.5128205128206,
+        150
+      ],
+      "b": [
+        911.4871794871794,
+        150
+      ],
+      "sill_m": 9.98,
+      "head_m": 13.88,
+      "width_m": 1.48,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "upper_envelope_13_1_window_1",
+      "a": [
+        1083,
+        223.05128205128204
+      ],
+      "b": [
+        1083,
+        233.94871794871796
+      ],
+      "sill_m": 4.58,
+      "head_m": 9.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_13_1_window_2",
+      "a": [
+        1083,
+        269.05128205128204
+      ],
+      "b": [
+        1083,
+        279.94871794871796
+      ],
+      "sill_m": 4.58,
+      "head_m": 9.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_13_2_window_1",
+      "a": [
+        1083,
+        223.05128205128204
+      ],
+      "b": [
+        1083,
+        233.94871794871796
+      ],
+      "sill_m": 9.58,
+      "head_m": 14.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_13_2_window_2",
+      "a": [
+        1083,
+        269.05128205128204
+      ],
+      "b": [
+        1083,
+        279.94871794871796
+      ],
+      "sill_m": 9.58,
+      "head_m": 14.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_19_1_window_1",
+      "a": [
+        912.4468805460808,
+        403.97942935159244
+      ],
+      "b": [
+        913.5531194539192,
+        414.8205706484075
+      ],
+      "sill_m": 4.58,
+      "head_m": 9.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_19_1_window_2",
+      "a": [
+        916.4468805460808,
+        443.1794293515925
+      ],
+      "b": [
+        917.5531194539192,
+        454.02057064840756
+      ],
+      "sill_m": 4.58,
+      "head_m": 9.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_19_2_window_1",
+      "a": [
+        912.4468805460808,
+        403.97942935159244
+      ],
+      "b": [
+        913.5531194539192,
+        414.8205706484075
+      ],
+      "sill_m": 9.58,
+      "head_m": 14.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_19_2_window_2",
+      "a": [
+        916.4468805460808,
+        443.1794293515925
+      ],
+      "b": [
+        917.5531194539192,
+        454.02057064840756
+      ],
+      "sill_m": 9.58,
+      "head_m": 14.42,
+      "width_m": 0.85,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_22_1_window_1",
+      "a": [
+        870.267303279026,
+        576.6327722482118
+      ],
+      "b": [
+        850.482696720974,
+        578.4922277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_1_window_2",
+      "a": [
+        837.017303279026,
+        579.7577722482118
+      ],
+      "b": [
+        817.232696720974,
+        581.6172277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_1_window_3",
+      "a": [
+        803.767303279026,
+        582.8827722482118
+      ],
+      "b": [
+        783.982696720974,
+        584.7422277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_1_window_4",
+      "a": [
+        770.517303279026,
+        586.0077722482118
+      ],
+      "b": [
+        750.732696720974,
+        587.8672277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_1_window_5",
+      "a": [
+        737.267303279026,
+        589.1327722482118
+      ],
+      "b": [
+        717.482696720974,
+        590.9922277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_1_window_6",
+      "a": [
+        704.017303279026,
+        592.2577722482118
+      ],
+      "b": [
+        684.232696720974,
+        594.1172277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_1_window_7",
+      "a": [
+        670.767303279026,
+        595.3827722482118
+      ],
+      "b": [
+        650.982696720974,
+        597.2422277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_1_window_8",
+      "a": [
+        637.517303279026,
+        598.5077722482118
+      ],
+      "b": [
+        617.732696720974,
+        600.3672277517882
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_1",
+      "a": [
+        870.267303279026,
+        576.6327722482118
+      ],
+      "b": [
+        850.482696720974,
+        578.4922277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_2",
+      "a": [
+        837.017303279026,
+        579.7577722482118
+      ],
+      "b": [
+        817.232696720974,
+        581.6172277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_3",
+      "a": [
+        803.767303279026,
+        582.8827722482118
+      ],
+      "b": [
+        783.982696720974,
+        584.7422277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_4",
+      "a": [
+        770.517303279026,
+        586.0077722482118
+      ],
+      "b": [
+        750.732696720974,
+        587.8672277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_5",
+      "a": [
+        737.267303279026,
+        589.1327722482118
+      ],
+      "b": [
+        717.482696720974,
+        590.9922277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_6",
+      "a": [
+        704.017303279026,
+        592.2577722482118
+      ],
+      "b": [
+        684.232696720974,
+        594.1172277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_7",
+      "a": [
+        670.767303279026,
+        595.3827722482118
+      ],
+      "b": [
+        650.982696720974,
+        597.2422277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_22_2_window_8",
+      "a": [
+        637.517303279026,
+        598.5077722482118
+      ],
+      "b": [
+        617.732696720974,
+        600.3672277517882
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_1_window_1",
+      "a": [
+        602.3188534484781,
+        601.834725629954
+      ],
+      "b": [
+        582.5382894086648,
+        603.7367029414745
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_1_window_2",
+      "a": [
+        565.175996305621,
+        605.4061542013826
+      ],
+      "b": [
+        545.3954322658077,
+        607.3081315129031
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_1_window_3",
+      "a": [
+        528.0331391627637,
+        608.9775827728112
+      ],
+      "b": [
+        508.2525751229505,
+        610.8795600843317
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_1_window_4",
+      "a": [
+        490.89028201990664,
+        612.5490113442397
+      ],
+      "b": [
+        471.10971798009336,
+        614.4509886557603
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_1_window_5",
+      "a": [
+        453.7474248770495,
+        616.1204399156683
+      ],
+      "b": [
+        433.9668608372362,
+        618.0224172271888
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_1_window_6",
+      "a": [
+        416.6045677341923,
+        619.6918684870969
+      ],
+      "b": [
+        396.8240036943791,
+        621.5938457986174
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_1_window_7",
+      "a": [
+        379.4617105913352,
+        623.2632970585255
+      ],
+      "b": [
+        359.6811465515219,
+        625.165274370046
+      ],
+      "sill_m": 5,
+      "head_m": 8.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_2_window_1",
+      "a": [
+        602.3188534484781,
+        601.834725629954
+      ],
+      "b": [
+        582.5382894086648,
+        603.7367029414745
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_2_window_2",
+      "a": [
+        565.175996305621,
+        605.4061542013826
+      ],
+      "b": [
+        545.3954322658077,
+        607.3081315129031
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_2_window_3",
+      "a": [
+        528.0331391627637,
+        608.9775827728112
+      ],
+      "b": [
+        508.2525751229505,
+        610.8795600843317
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_2_window_4",
+      "a": [
+        490.89028201990664,
+        612.5490113442397
+      ],
+      "b": [
+        471.10971798009336,
+        614.4509886557603
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_2_window_5",
+      "a": [
+        453.7474248770495,
+        616.1204399156683
+      ],
+      "b": [
+        433.9668608372362,
+        618.0224172271888
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_2_window_6",
+      "a": [
+        416.6045677341923,
+        619.6918684870969
+      ],
+      "b": [
+        396.8240036943791,
+        621.5938457986174
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_23_2_window_7",
+      "a": [
+        379.4617105913352,
+        623.2632970585255
+      ],
+      "b": [
+        359.6811465515219,
+        625.165274370046
+      ],
+      "sill_m": 10,
+      "head_m": 13.75,
+      "width_m": 1.55,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "upper_envelope_28_1_window_1",
+      "a": [
+        193.6285735680766,
+        540.836765258237
+      ],
+      "b": [
+        193.0914264319234,
+        533.163234741763
+      ],
+      "sill_m": 5.8,
+      "head_m": 7.4,
+      "width_m": 0.6,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_28_2_window_1",
+      "a": [
+        194.09857731221064,
+        547.5511044601518
+      ],
+      "b": [
+        192.62142268778936,
+        526.4488955398482
+      ],
+      "sill_m": 10,
+      "head_m": 13.85,
+      "width_m": 1.65,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_1",
+      "a": [
+        137.93767118438333,
+        468.49098133913054
+      ],
+      "b": [
+        137.3045377136646,
+        463.32039132826077
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_2",
+      "a": [
+        137.19156673535937,
+        462.3977950054349
+      ],
+      "b": [
+        136.55843326464063,
+        457.2272049945651
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_3",
+      "a": [
+        136.44156673535937,
+        456.2727950054349
+      ],
+      "b": [
+        135.80843326464063,
+        451.1022049945651
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_4",
+      "a": [
+        135.69156673535937,
+        450.1477950054349
+      ],
+      "b": [
+        135.05843326464063,
+        444.9772049945651
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_5",
+      "a": [
+        134.94156673535937,
+        444.0227950054349
+      ],
+      "b": [
+        134.30843326464063,
+        438.8522049945651
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_6",
+      "a": [
+        134.19156673535937,
+        437.8977950054349
+      ],
+      "b": [
+        133.55843326464063,
+        432.7272049945651
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_7",
+      "a": [
+        133.44156673535937,
+        431.7727950054349
+      ],
+      "b": [
+        132.80843326464063,
+        426.6022049945651
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_1_window_8",
+      "a": [
+        132.6954622863354,
+        425.67960867173923
+      ],
+      "b": [
+        132.06232881561667,
+        420.50901866086946
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_1",
+      "a": [
+        137.93767118438333,
+        468.49098133913054
+      ],
+      "b": [
+        137.3045377136646,
+        463.32039132826077
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_2",
+      "a": [
+        137.19156673535937,
+        462.3977950054349
+      ],
+      "b": [
+        136.55843326464063,
+        457.2272049945651
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_3",
+      "a": [
+        136.44156673535937,
+        456.2727950054349
+      ],
+      "b": [
+        135.80843326464063,
+        451.1022049945651
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_4",
+      "a": [
+        135.69156673535937,
+        450.1477950054349
+      ],
+      "b": [
+        135.05843326464063,
+        444.9772049945651
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_5",
+      "a": [
+        134.94156673535937,
+        444.0227950054349
+      ],
+      "b": [
+        134.30843326464063,
+        438.8522049945651
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_6",
+      "a": [
+        134.19156673535937,
+        437.8977950054349
+      ],
+      "b": [
+        133.55843326464063,
+        432.7272049945651
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_7",
+      "a": [
+        133.44156673535937,
+        431.7727950054349
+      ],
+      "b": [
+        132.80843326464063,
+        426.6022049945651
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_32_2_window_8",
+      "a": [
+        132.6954622863354,
+        425.67960867173923
+      ],
+      "b": [
+        132.06232881561667,
+        420.50901866086946
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.4063183068407018,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_1",
+      "a": [
+        145.95492625113008,
+        414.4891641794742
+      ],
+      "b": [
+        144.91443953026118,
+        402.6969813429601
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_2",
+      "a": [
+        144.83274336043445,
+        401.771091418257
+      ],
+      "b": [
+        143.79225663956555,
+        389.978908581743
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_3",
+      "a": [
+        143.70774336043445,
+        389.021091418257
+      ],
+      "b": [
+        142.66725663956555,
+        377.228908581743
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_4",
+      "a": [
+        142.58274336043445,
+        376.271091418257
+      ],
+      "b": [
+        141.54225663956555,
+        364.478908581743
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_5",
+      "a": [
+        141.45774336043445,
+        363.521091418257
+      ],
+      "b": [
+        140.41725663956555,
+        351.728908581743
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_6",
+      "a": [
+        140.33274336043445,
+        350.771091418257
+      ],
+      "b": [
+        139.29225663956555,
+        338.978908581743
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_7",
+      "a": [
+        139.20774336043445,
+        338.021091418257
+      ],
+      "b": [
+        138.16725663956555,
+        326.228908581743
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_1_window_8",
+      "a": [
+        138.08556046973882,
+        325.3030186570399
+      ],
+      "b": [
+        137.04507374886992,
+        313.5108358205258
+      ],
+      "sill_m": 4.8,
+      "head_m": 8.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_1",
+      "a": [
+        145.95492625113008,
+        414.4891641794742
+      ],
+      "b": [
+        144.91443953026118,
+        402.6969813429601
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_2",
+      "a": [
+        144.83274336043445,
+        401.771091418257
+      ],
+      "b": [
+        143.79225663956555,
+        389.978908581743
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_3",
+      "a": [
+        143.70774336043445,
+        389.021091418257
+      ],
+      "b": [
+        142.66725663956555,
+        377.228908581743
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_4",
+      "a": [
+        142.58274336043445,
+        376.271091418257
+      ],
+      "b": [
+        141.54225663956555,
+        364.478908581743
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_5",
+      "a": [
+        141.45774336043445,
+        363.521091418257
+      ],
+      "b": [
+        140.41725663956555,
+        351.728908581743
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_6",
+      "a": [
+        140.33274336043445,
+        350.771091418257
+      ],
+      "b": [
+        139.29225663956555,
+        338.978908581743
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_7",
+      "a": [
+        139.20774336043445,
+        338.021091418257
+      ],
+      "b": [
+        138.16725663956555,
+        326.228908581743
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_34_2_window_8",
+      "a": [
+        138.08556046973882,
+        325.3030186570399
+      ],
+      "b": [
+        137.04507374886992,
+        313.5108358205258
+      ],
+      "sill_m": 9.8,
+      "head_m": 13.75,
+      "width_m": 0.9233638177037468,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_36_1_window_1",
+      "a": [
+        120,
+        282.85128205128206
+      ],
+      "b": [
+        120,
+        268.74871794871797
+      ],
+      "sill_m": 4.58,
+      "head_m": 9.42,
+      "width_m": 1.1,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_36_1_window_2",
+      "a": [
+        120,
+        233.25128205128203
+      ],
+      "b": [
+        120,
+        219.14871794871794
+      ],
+      "sill_m": 4.58,
+      "head_m": 9.42,
+      "width_m": 1.1,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_36_2_window_1",
+      "a": [
+        120,
+        282.85128205128206
+      ],
+      "b": [
+        120,
+        268.74871794871797
+      ],
+      "sill_m": 9.58,
+      "head_m": 14.42,
+      "width_m": 1.1,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "upper_envelope_36_2_window_2",
+      "a": [
+        120,
+        233.25128205128203
+      ],
+      "b": [
+        120,
+        219.14871794871794
+      ],
+      "sill_m": 9.58,
+      "head_m": 14.42,
+      "width_m": 1.1,
+      "kind": "window",
+      "confidence": "medium"
+    },
+    {
+      "id": "north_classroom_front_door_1",
+      "a": [
+        265.5897435897436,
+        310
+      ],
+      "b": [
+        278.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_2",
+      "a": [
+        343.5897435897436,
+        310
+      ],
+      "b": [
+        356.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_3",
+      "a": [
+        400.5897435897436,
+        310
+      ],
+      "b": [
+        413.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_4",
+      "a": [
+        464.58974358974365,
+        310
+      ],
+      "b": [
+        477.41025641025647,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_5",
+      "a": [
+        488.58974358974353,
+        310
+      ],
+      "b": [
+        501.41025641025635,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_6",
+      "a": [
+        561.5897435897436,
+        310
+      ],
+      "b": [
+        574.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_7",
+      "a": [
+        622.5897435897435,
+        310
+      ],
+      "b": [
+        635.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_8",
+      "a": [
+        682.5897435897436,
+        310
+      ],
+      "b": [
+        695.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_9",
+      "a": [
+        709.5897435897436,
+        310
+      ],
+      "b": [
+        722.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_10",
+      "a": [
+        785.5897435897436,
+        310
+      ],
+      "b": [
+        798.4102564102565,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_11",
+      "a": [
+        843.5897435897436,
+        310
+      ],
+      "b": [
+        856.4102564102565,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "north_classroom_front_door_12",
+      "a": [
+        909.5897435897435,
+        310
+      ],
+      "b": [
+        922.4102564102564,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "west_support_spine_door_1",
+      "a": [
+        205,
+        227.7497435897436
+      ],
+      "b": [
+        205,
+        240.5702564102564
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "west_support_spine_door_2",
+      "a": [
+        205,
+        266.1497435897436
+      ],
+      "b": [
+        205,
+        278.9702564102564
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "west_support_spine_door_3",
+      "a": [
+        205,
+        293.9897435897436
+      ],
+      "b": [
+        205,
+        306.81025641025644
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "island_north_door_1",
+      "a": [
+        360.0697435897436,
+        336
+      ],
+      "b": [
+        372.89025641025637,
+        336
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "island_north_door_2",
+      "a": [
+        415.1497435897436,
+        336
+      ],
+      "b": [
+        427.9702564102564,
+        336
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "island_south_door_1",
+      "a": [
+        294.8118861650969,
+        398.43234281957524
+      ],
+      "b": [
+        307.5881138349031,
+        397.36765718042477
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "island_south_door_2",
+      "a": [
+        327.45188616509694,
+        395.71234281957527
+      ],
+      "b": [
+        340.22811383490307,
+        394.64765718042474
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "east_service_front_door_1",
+      "a": [
+        956.7397435897436,
+        282
+      ],
+      "b": [
+        969.5602564102564,
+        282
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "east_service_front_door_2",
+      "a": [
+        993.2297435897436,
+        282
+      ],
+      "b": [
+        1006.0502564102565,
+        282
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "east_service_ante_door_1",
+      "a": [
+        947.9897435897436,
+        257
+      ],
+      "b": [
+        960.8102564102564,
+        257
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "east_service_ante_door_2",
+      "a": [
+        989.6397435897436,
+        257
+      ],
+      "b": [
+        1002.4602564102564,
+        257
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "west_stair_inner_door_1",
+      "a": [
+        180,
+        296.6666666666667
+      ],
+      "b": [
+        180,
+        309.4871794871795
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "west_stair_front_door_1",
+      "a": [
+        150.07307692307694,
+        310
+      ],
+      "b": [
+        171.22692307692307,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1.65,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "east_stair_front_door_1",
+      "a": [
+        1038.153076923077,
+        310
+      ],
+      "b": [
+        1059.306923076923,
+        310
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1.65,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "east_entrance_screen_door_1",
+      "a": [
+        1022,
+        318.5897435897436
+      ],
+      "b": [
+        1022,
+        331.4102564102564
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "east_entrance_screen_door_2",
+      "a": [
+        1022,
+        347.5897435897436
+      ],
+      "b": [
+        1022,
+        360.4102564102564
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_stair_front_door_1",
+      "a": [
+        868.9698321828319,
+        368.4934120582234
+      ],
+      "b": [
+        890.0301678171681,
+        366.5065879417766
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1.65,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_classroom_front_door_1",
+      "a": [
+        345.3840644053819,
+        422.9074117753349
+      ],
+      "b": [
+        358.14593559461815,
+        421.68258822466515
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_classroom_front_door_2",
+      "a": [
+        534.3390644053818,
+        404.7724117753349
+      ],
+      "b": [
+        547.1009355946181,
+        403.5475882246651
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "lecture_collaborative_divider_door_1",
+      "a": [
+        611.1889363388748,
+        567.1212608967787
+      ],
+      "b": [
+        612.8110636611252,
+        579.8387391032213
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "lecture_west_door_1",
+      "a": [
+        351.152540639021,
+        592.9525252943572
+      ],
+      "b": [
+        352.447459360979,
+        605.7074747056429
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_service_north_door_1",
+      "a": [
+        277.8513576620104,
+        441.429233855495
+      ],
+      "b": [
+        290.58864233798954,
+        439.97076614450503
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_service_corridor_west_door_1",
+      "a": [
+        270.00128844135713,
+        456.8724200903771
+      ],
+      "b": [
+        271.0787115586429,
+        469.6475799096229
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_service_corridor_west_door_2",
+      "a": [
+        274.9012884413571,
+        514.9724200903771
+      ],
+      "b": [
+        275.9787115586429,
+        527.7475799096229
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_service_corridor_west_door_3",
+      "a": [
+        279.6612884413571,
+        571.4124200903772
+      ],
+      "b": [
+        280.7387115586429,
+        584.1875799096229
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_service_corridor_east_door_1",
+      "a": [
+        296.51613315917035,
+        460.576389206929
+      ],
+      "b": [
+        297.6838668408297,
+        473.34361079307104
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_service_cross_1_door_1",
+      "a": [
+        255.77455224342705,
+        479.34342186087406
+      ],
+      "b": [
+        268.54544775657297,
+        478.21657813912594
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "lecture_lobby_1_door_1",
+      "a": [
+        366.72726438200806,
+        426.99993115156656
+      ],
+      "b": [
+        369.27273561799194,
+        448.00006884843344
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1.65,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "curved_classroom_boundary_5_door_1",
+      "a": [
+        781.1388782625376,
+        464.5353264864592
+      ],
+      "b": [
+        786.0611217374625,
+        477.0646735135408
+      ],
+      "sill_m": 0,
+      "head_m": 2.25,
+      "width_m": 1.05,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "elevator_landing_wall_door_1",
+      "a": [
+        279,
+        344.94871794871796
+      ],
+      "b": [
+        279,
+        359.05128205128204
+      ],
+      "sill_m": 0,
+      "head_m": 2.2,
+      "width_m": 1.1,
+      "kind": "door",
+      "confidence": "medium"
+    },
+    {
+      "id": "elevator_landing_wall_door_2",
+      "a": [
+        279,
+        376.94871794871796
+      ],
+      "b": [
+        279,
+        391.05128205128204
+      ],
+      "sill_m": 0,
+      "head_m": 2.2,
+      "width_m": 1.1,
+      "kind": "door",
+      "confidence": "medium"
+    },
+    {
+      "id": "elevator_landing_wall_door_1",
+      "a": [
+        279,
+        344.94871794871796
+      ],
+      "b": [
+        279,
+        359.05128205128204
+      ],
+      "sill_m": 4.5,
+      "head_m": 6.7,
+      "width_m": 1.1,
+      "kind": "door",
+      "confidence": "medium"
+    },
+    {
+      "id": "elevator_landing_wall_door_2",
+      "a": [
+        279,
+        376.94871794871796
+      ],
+      "b": [
+        279,
+        391.05128205128204
+      ],
+      "sill_m": 4.5,
+      "head_m": 6.7,
+      "width_m": 1.1,
+      "kind": "door",
+      "confidence": "medium"
+    },
+    {
+      "id": "elevator_landing_wall_door_1",
+      "a": [
+        279,
+        344.94871794871796
+      ],
+      "b": [
+        279,
+        359.05128205128204
+      ],
+      "sill_m": 9.5,
+      "head_m": 11.7,
+      "width_m": 1.1,
+      "kind": "door",
+      "confidence": "medium"
+    },
+    {
+      "id": "elevator_landing_wall_door_2",
+      "a": [
+        279,
+        376.94871794871796
+      ],
+      "b": [
+        279,
+        391.05128205128204
+      ],
+      "sill_m": 9.5,
+      "head_m": 11.7,
+      "width_m": 1.1,
+      "kind": "door",
+      "confidence": "medium"
+    },
+    {
+      "id": "tower_stone_window_1",
+      "a": [
+        120,
+        282.85128205128206
+      ],
+      "b": [
+        120,
+        268.74871794871797
+      ],
+      "sill_m": 14.5,
+      "head_m": 17.4,
+      "width_m": 1.1,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "tower_stone_window_2",
+      "a": [
+        120,
+        233.25128205128203
+      ],
+      "b": [
+        120,
+        219.14871794871794
+      ],
+      "sill_m": 14.5,
+      "head_m": 17.4,
+      "width_m": 1.1,
+      "kind": "window",
+      "confidence": "low"
+    },
+    {
+      "id": "south_vestibule_window_1",
+      "a": [
+        501.7,
+        625.26
+      ],
+      "b": [
+        508.3,
+        676.74
+      ],
+      "sill_m": 0.5,
+      "head_m": 2.8,
+      "width_m": 4.048305501515418,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "south_vestibule_door_1",
+      "a": [
+        484.98577667903,
+        692.3986241540656
+      ],
+      "b": [
+        462.01422332097,
+        694.6013758459344
+      ],
+      "sill_m": 0,
+      "head_m": 2.5,
+      "width_m": 1.8,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_vestibule_door_2",
+      "a": [
+        411.98577667903,
+        699.3986241540656
+      ],
+      "b": [
+        389.01422332097,
+        701.6013758459344
+      ],
+      "sill_m": 0,
+      "head_m": 2.5,
+      "width_m": 1.8,
+      "kind": "door",
+      "confidence": "high"
+    },
+    {
+      "id": "south_vestibule_window_1",
+      "a": [
+        362.64,
+        690.57
+      ],
+      "b": [
+        357.36,
+        638.4300000000001
+      ],
+      "sill_m": 0.5,
+      "head_m": 2.8,
+      "width_m": 4.087719470805208,
+      "kind": "window",
+      "confidence": "high"
+    },
+    {
+      "id": "portal_lower_door_1",
+      "a": [
+        136.97266160080156,
+        431.1856084092179
+      ],
+      "b": [
+        139.02733839919844,
+        454.8143915907821
+      ],
+      "sill_m": 0,
+      "head_m": 2.7,
+      "width_m": 1.85,
+      "kind": "door",
+      "confidence": "medium"
+    }
+  ],
+  "rooms": [
+    {
+      "room_id": "classroom_west",
+      "name": "West active-learning classroom",
+      "estimated_area_m2": 204.036066,
+      "plan_polygon_pixels": [
+        [
+          258,
+          155
+        ],
+        [
+          332,
+          155
+        ],
+        [
+          339,
+          149
+        ],
+        [
+          398,
+          149
+        ],
+        [
+          405,
+          157
+        ],
+        [
+          479,
+          157
+        ],
+        [
+          479,
+          306
+        ],
+        [
+          259,
+          306
+        ]
+      ]
+    },
+    {
+      "room_id": "classroom_center",
+      "name": "Central instructional classroom",
+      "estimated_area_m2": 192.181392,
+      "plan_polygon_pixels": [
+        [
+          486,
+          157
+        ],
+        [
+          698,
+          157
+        ],
+        [
+          698,
+          306
+        ],
+        [
+          486,
+          306
+        ]
+      ]
+    },
+    {
+      "room_id": "classroom_east",
+      "name": "East active-learning classroom",
+      "estimated_area_m2": 201.772818,
+      "plan_polygon_pixels": [
+        [
+          705,
+          154
+        ],
+        [
+          777,
+          150
+        ],
+        [
+          784,
+          157
+        ],
+        [
+          925,
+          157
+        ],
+        [
+          925,
+          306
+        ],
+        [
+          705,
+          306
+        ]
+      ]
+    },
+    {
+      "room_id": "lecture_hall",
+      "name": "Lecture / auditorium",
+      "estimated_area_m2": 297.72662399999996,
+      "plan_polygon_pixels": [
+        [
+          339,
+          426
+        ],
+        [
+          585,
+          400
+        ],
+        [
+          611,
+          594
+        ],
+        [
+          357,
+          619
+        ]
+      ]
+    },
+    {
+      "room_id": "collaborative_classroom",
+      "name": "Curved collaborative classroom",
+      "estimated_area_m2": 199.804644,
+      "plan_polygon_pixels": [
+        [
+          594,
+          400
+        ],
+        [
+          647,
+          393
+        ],
+        [
+          690,
+          394
+        ],
+        [
+          724,
+          403
+        ],
+        [
+          752,
+          422
+        ],
+        [
+          774,
+          449
+        ],
+        [
+          787,
+          479
+        ],
+        [
+          799,
+          574
+        ],
+        [
+          616,
+          594
+        ]
+      ]
+    },
+    {
+      "room_id": "south_social",
+      "name": "Open instructional / collaboration area",
+      "estimated_area_m2": 99.94491000000001,
+      "plan_polygon_pixels": [
+        [
+          690,
+          384
+        ],
+        [
+          849,
+          371
+        ],
+        [
+          871,
+          570
+        ],
+        [
+          804,
+          577
+        ],
+        [
+          794,
+          478
+        ],
+        [
+          779,
+          444
+        ],
+        [
+          757,
+          416
+        ],
+        [
+          726,
+          399
+        ]
+      ]
+    },
+    {
+      "room_id": "main_circulation",
+      "name": "Main circulation",
+      "estimated_area_m2": 513.827262,
+      "plan_polygon_pixels": [
+        [
+          143,
+          313
+        ],
+        [
+          260,
+          313
+        ],
+        [
+          260,
+          310
+        ],
+        [
+          928,
+          310
+        ],
+        [
+          928,
+          281
+        ],
+        [
+          1020,
+          281
+        ],
+        [
+          1020,
+          366
+        ],
+        [
+          906,
+          378
+        ],
+        [
+          902,
+          363
+        ],
+        [
+          851,
+          369
+        ],
+        [
+          851,
+          379
+        ],
+        [
+          656,
+          398
+        ],
+        [
+          341,
+          428
+        ],
+        [
+          334,
+          440
+        ],
+        [
+          206,
+          454
+        ],
+        [
+          207,
+          404
+        ],
+        [
+          149,
+          410
+        ]
+      ]
+    },
+    {
+      "room_id": "support_west_north",
+      "name": "Dedicated support",
+      "estimated_area_m2": 13.403052,
+      "plan_polygon_pixels": [
+        [
+          185,
+          155
+        ],
+        [
+          214,
+          155
+        ],
+        [
+          214,
+          214
+        ],
+        [
+          203,
+          214
+        ],
+        [
+          203,
+          239
+        ],
+        [
+          184,
+          239
+        ]
+      ]
+    },
+    {
+      "room_id": "support_west_01",
+      "name": "West support 01",
+      "estimated_area_m2": 19.103759999999998,
+      "plan_polygon_pixels": [
+        [
+          217,
+          156
+        ],
+        [
+          254,
+          156
+        ],
+        [
+          254,
+          236
+        ],
+        [
+          208,
+          236
+        ],
+        [
+          208,
+          216
+        ],
+        [
+          217,
+          216
+        ]
+      ]
+    },
+    {
+      "room_id": "support_west_02",
+      "name": "West support 02",
+      "estimated_area_m2": 8.116056,
+      "plan_polygon_pixels": [
+        [
+          208,
+          243
+        ],
+        [
+          254,
+          243
+        ],
+        [
+          254,
+          272
+        ],
+        [
+          208,
+          272
+        ]
+      ]
+    },
+    {
+      "room_id": "support_west_03",
+      "name": "West support 03",
+      "estimated_area_m2": 7.556328000000001,
+      "plan_polygon_pixels": [
+        [
+          208,
+          278
+        ],
+        [
+          254,
+          278
+        ],
+        [
+          254,
+          305
+        ],
+        [
+          208,
+          305
+        ]
+      ]
+    },
+    {
+      "room_id": "west_social",
+      "name": "West open support",
+      "estimated_area_m2": 21.586032,
+      "plan_polygon_pixels": [
+        [
+          145,
+          339
+        ],
+        [
+          204,
+          337
+        ],
+        [
+          205,
+          397
+        ],
+        [
+          152,
+          405
+        ]
+      ]
+    },
+    {
+      "room_id": "elevator_core",
+      "name": "Two elevator shafts",
+      "estimated_area_m2": 14.218308,
+      "plan_polygon_pixels": [
+        [
+          242,
+          339
+        ],
+        [
+          280,
+          339
+        ],
+        [
+          280,
+          399
+        ],
+        [
+          242,
+          402
+        ]
+      ]
+    },
+    {
+      "room_id": "core_support",
+      "name": "Core support",
+      "estimated_area_m2": 19.57527,
+      "plan_polygon_pixels": [
+        [
+          282,
+          339
+        ],
+        [
+          337,
+          339
+        ],
+        [
+          337,
+          395
+        ],
+        [
+          282,
+          400
+        ]
+      ]
+    },
+    {
+      "room_id": "meeting_01",
+      "name": "Small support room 01",
+      "estimated_area_m2": 11.04246,
+      "plan_polygon_pixels": [
+        [
+          342,
+          339
+        ],
+        [
+          375,
+          339
+        ],
+        [
+          375,
+          392
+        ],
+        [
+          342,
+          396
+        ]
+      ]
+    },
+    {
+      "room_id": "meeting_02",
+      "name": "Small support room 02",
+      "estimated_area_m2": 9.086454,
+      "plan_polygon_pixels": [
+        [
+          380,
+          339
+        ],
+        [
+          409,
+          339
+        ],
+        [
+          409,
+          389
+        ],
+        [
+          380,
+          392
+        ]
+      ]
+    },
+    {
+      "room_id": "meeting_03",
+      "name": "Small support room 03",
+      "estimated_area_m2": 7.671924000000001,
+      "plan_polygon_pixels": [
+        [
+          415,
+          339
+        ],
+        [
+          441,
+          339
+        ],
+        [
+          441,
+          386
+        ],
+        [
+          415,
+          389
+        ]
+      ]
+    },
+    {
+      "room_id": "east_services",
+      "name": "East restroom/service core",
+      "estimated_area_m2": 50.083488,
+      "plan_polygon_pixels": [
+        [
+          934,
+          180
+        ],
+        [
+          1018,
+          180
+        ],
+        [
+          1018,
+          278
+        ],
+        [
+          934,
+          278
+        ]
+      ]
+    },
+    {
+      "room_id": "southwest_services",
+      "name": "Southwest building services",
+      "estimated_area_m2": 53.207622,
+      "plan_polygon_pixels": [
+        [
+          204,
+          487
+        ],
+        [
+          267,
+          480
+        ],
+        [
+          278,
+          607
+        ],
+        [
+          218,
+          611
+        ],
+        [
+          213,
+          582
+        ],
+        [
+          203,
+          582
+        ],
+        [
+          196,
+          494
+        ]
+      ]
+    },
+    {
+      "room_id": "southwest_circulation",
+      "name": "Southwest exit corridor",
+      "estimated_area_m2": 23.68197,
+      "plan_polygon_pixels": [
+        [
+          270,
+          449
+        ],
+        [
+          293,
+          447
+        ],
+        [
+          308,
+          604
+        ],
+        [
+          282,
+          607
+        ]
+      ]
+    },
+    {
+      "room_id": "southwest_support_01",
+      "name": "Southwest support 01",
+      "estimated_area_m2": 11.653901999999999,
+      "plan_polygon_pixels": [
+        [
+          206,
+          453
+        ],
+        [
+          265,
+          447
+        ],
+        [
+          268,
+          478
+        ],
+        [
+          206,
+          485
+        ]
+      ]
+    },
+    {
+      "room_id": "southwest_support_02",
+      "name": "Southwest support 02",
+      "estimated_area_m2": 6.67719,
+      "plan_polygon_pixels": [
+        [
+          298,
+          446
+        ],
+        [
+          330,
+          442
+        ],
+        [
+          333,
+          476
+        ],
+        [
+          300,
+          479
+        ]
+      ]
+    },
+    {
+      "room_id": "southwest_support_03",
+      "name": "Southwest support 03",
+      "estimated_area_m2": 9.241596,
+      "plan_polygon_pixels": [
+        [
+          301,
+          484
+        ],
+        [
+          334,
+          480
+        ],
+        [
+          339,
+          526
+        ],
+        [
+          306,
+          529
+        ]
+      ]
+    },
+    {
+      "room_id": "southwest_support_04",
+      "name": "Southwest support 04",
+      "estimated_area_m2": 15.076151999999999,
+      "plan_polygon_pixels": [
+        [
+          306,
+          534
+        ],
+        [
+          341,
+          530
+        ],
+        [
+          348,
+          600
+        ],
+        [
+          313,
+          604
+        ]
+      ]
+    }
+  ],
+  "compressed_asset": "vt-academic-classroom.meshopt.glb",
+  "compressed_file_bytes": 430432,
+  "compression": "EXT_meshopt_compression; requires MeshoptDecoder in Three.js"
+}
