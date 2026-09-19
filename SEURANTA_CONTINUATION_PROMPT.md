@@ -15,7 +15,7 @@ Continue the Seuranta frontend in `https://github.com/yonathanwold/Seuranta.git`
 
 - Repository: `https://github.com/yonathanwold/Seuranta.git`
 - Current branch: `team/app`
-- Latest implementation commit when this handoff was written: `fe55a3d` (`feat(ui): adopt Seuranta white and black brand system`)
+- Latest implementation commit: `db45db9` (`feat(map): add building overview and first-person walkthrough`). Run `git rev-parse --short HEAD` after checkout for the newest docs commit.
 - Run `git rev-parse HEAD` after checkout for the exact newest handoff commit.
 
 `team/app` is an orphan frontend history. It has no merge base with the three backend team branches. Do not merge those histories into this branch, force-push, or rewrite another team's branch.
@@ -30,7 +30,7 @@ The newer data-platform commit only imported edge documentation/files; it did no
 
 ## Current application
 
-The app is a React 18, TypeScript, Vite, Three.js, React Three Fiber, Drei, and Zustand frontend. It shows the first floor of Virginia Tech's Academic Classroom Building as the main operational map.
+The app is a React 18, TypeScript, Vite, Three.js, React Three Fiber, Drei, and Zustand frontend. It opens with the full modeled Virginia Tech Academic Classroom Building, then lets an operator switch to the first-floor operational map.
 
 Important files:
 
@@ -43,6 +43,7 @@ src/
   App.tsx
   styles.css
   components/MapCanvas.tsx
+  components/OperationsPages.tsx
   brand-system.css
   domain/
     adapters.ts
@@ -53,6 +54,7 @@ src/
     mockProvider.ts
     roomModel.ts
     simulation.ts
+    workspace.ts
     store.ts
     types.ts
   tests/
@@ -63,12 +65,12 @@ README.md
 CONTRIBUTING.md
 ```
 
-The app uses the uncompressed GLB because it is about 0.5 MB and opens without a Meshopt decoder. The compressed copy is kept for later optimization. `MapCanvas` clones the scene and removes `Floor_02`, `Floor_03`, and `Roof`, so the operational view is a first-floor cutaway without changing the source file.
+The app uses the uncompressed GLB because it is about 0.5 MB and opens without a Meshopt decoder. The compressed copy is kept for later optimization. `MapCanvas` clones the scene: the default Building view keeps every modeled floor and the roof, while Floor 1 removes `Floor_02`, `Floor_03`, and `Roof` without changing the source file.
 
 ## Completed features
 
-- Virginia Tech first-floor 3D model with orbit, pan, zoom, Overview, Top, Focus, and Reset.
-- Six anonymous simulated devices on repeatable learning-space and circulation routes.
+- Virginia Tech full-building and first-floor 3D views with orbit, pan, zoom, Overview, Top, Focus, Reset, and first-person Walkthrough mode.
+- Twenty anonymous simulated devices on repeatable learning-space and circulation routes.
 - Four planned anchors with simulated online/degraded state.
 - Smooth marker interpolation, confidence, uncertainty radius, zones, timestamps, and activity events.
 - Search and linked list/map/detail selection.
@@ -81,6 +83,10 @@ The app uses the uncompressed GLB because it is about 0.5 MB and opens without a
 - Responsive desktop layout checked at 1366×768 and 1920×1080.
 - Supplied Seuranta logo cropped into full and compact assets, applied to the navigation, favicon, README, and responsive rail.
 - White/black product theme with green/amber reserved for health and simulation state.
+- Devices, Events, and Reports pages. They derive from `src/domain/workspace.ts`, so navigation, occupancy, event counts, and device details all use the same provider snapshot. Room records remain in that shared model for occupancy and report calculations; there is no separate Spaces navigation item.
+- The old Simulations navigation page was removed. Simulation remains a data mode with controls in the Live map detail panel.
+- Locate-in-map from Devices carries the selected session into the map and focuses the camera.
+- The default view starts at the full building. Walkthrough uses WASD and mouse look, keeps the camera at eye height, and clamps movement to metadata-informed floor regions with doorway overlap.
 - Static floor-plan fallback with selectable devices and anchors when a browser cannot create WebGL.
 - Natural project documentation, demo guide, architecture notes, and privacy guidance.
 
@@ -150,7 +156,7 @@ Do not add direct Pi networking to the frontend.
 
 ```text
 npm.cmd run lint             passed
-npm.cmd test -- --run        7 files, 21 tests passed
+npm.cmd test -- --run        7 files, 22 tests passed
 npm.cmd run build            passed
 npm.cmd audit --omit=dev     0 vulnerabilities
 ```
@@ -161,6 +167,7 @@ Manual browser QA covered:
 
 - WebGL model rendering at 1920×1080 with software WebGL, plus the static preview at 1366×768 and 1920×1080 in the restricted browser surface
 - Overview, Top, and Focus
+- Building overview, Floor 1 cutaway, and first-person Walkthrough controls
 - search and linked selection
 - pause/play and simulation movement
 - Floor setup values and live scope fields
@@ -169,10 +176,11 @@ Manual browser QA covered:
 
 ## Incomplete work and known limits
 
-- The model scale, geometry, upper floors, and planned anchors are estimates. The team still needs an on-site measurement and anchor survey.
+- The model scale, upper-floor geometry, and planned anchors are estimates. The team still needs an on-site measurement and anchor survey. Walkthrough collision is a navigation envelope, not a replacement for the positioning team's eventual floor graph.
 - There is no backend bundled on `team/app`, so Live mode needs separately running team services.
 - Upper-floor switching, replay, heatmaps, and historical analytics are not implemented.
 - Simulation routes are metadata-informed demo loops, not validation of positioning accuracy.
+- Report download, report scheduling, device enrollment, and alert creation are demo interactions that acknowledge the action; they are not connected to a backend yet.
 - The optimized Meshopt asset is stored but not loaded yet.
 - Three.js code splitting is not implemented.
 
@@ -183,8 +191,9 @@ No active application bug was known when this handoff was written.
 1. Run a small first-floor pilot: measure known points, choose the coordinate origin, and enter installed anchor coordinates.
 2. Start the data-platform API and validate a real scoped REST snapshot and WebSocket stream.
 3. Compare known physical device positions with the UI and record error before tuning confidence or smoothing.
-4. Add floor switching only when there is real positioning data for another floor.
-5. Optimize the bundle or enable Meshopt only if measured load time makes it necessary.
+4. Replace the acknowledged demo actions with API mutations only when the backend contract exists.
+5. Add floor switching only when there is real positioning data for another floor.
+6. Optimize the bundle or enable Meshopt only if measured load time makes it necessary.
 
 Recommended assignments:
 

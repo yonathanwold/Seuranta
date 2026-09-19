@@ -13,15 +13,16 @@ Open `http://127.0.0.1:4173/`.
 
 ## Two-minute walkthrough
 
-1. Start on Overview. Explain that this is a first-floor cutaway of Virginia Tech's Academic Classroom Building and that the model is an estimate, not a survey.
-2. Point out the six anonymous devices and four planned anchors. The devices use routes traced from the supplied floor metadata.
+1. Start on Building. Explain that the first render shows the complete modeled Virginia Tech Academic Classroom Building. Then choose Floor 1 to open the operational cutaway. The geometry is an estimate, not a survey.
+2. Point out the twenty anonymous devices and four planned anchors. The devices use routes traced from the supplied floor metadata.
 3. Select `Device A7F3`. Show its coordinates, confidence, uncertainty radius, zone, and update time.
 4. Search for `E5F6`, select it, and press Focus. The camera moves once and then leaves manual control alone.
 5. Switch between Top and Overview. Drag to orbit or pan and scroll to zoom.
-6. Toggle Devices, Anchors, Labels, Uncertainty, or Floor overlay in Map layers.
-7. Pause and resume the simulation. Restart resets the routes. Weak signal lowers one device's confidence and degrades one anchor.
-8. Open Floor setup. Show the floor dimensions, origin, yaw, anchor IDs, anchor coordinates, and exact live scope fields.
-9. Switch to Live. With no API running, the app shows zero devices, planned anchors as offline, and `Live source unavailable`. Switch back to Demo to finish.
+6. Click Walkthrough, click the map, and use W A S D plus the mouse to look around the building. Explain that the demo keeps movement inside modeled walkable regions and leaves the final floor graph to the live integration.
+7. Toggle Devices, Anchors, Labels, Uncertainty, or Floor overlay in Map layers.
+8. Pause and resume the simulation. Restart resets the routes. Weak signal lowers one device's confidence and degrades one anchor.
+9. Open Floor setup. Show the floor dimensions, origin, yaw, anchor IDs, anchor coordinates, and exact live scope fields.
+10. Switch to Live. With no API running, the app shows zero devices, planned anchors as offline, and `Live source unavailable`. Switch back to Demo to finish.
 
 ## Small pilot checklist
 

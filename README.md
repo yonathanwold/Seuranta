@@ -2,9 +2,9 @@
 
 ![Seuranta logo](public/brand/seuranta-logo.png)
 
-Seuranta is our indoor positioning dashboard. It turns location estimates from anonymous test devices into a live 3D view of a building floor. Our current pilot is the first floor of Virginia Tech's Academic Classroom Building.
+Seuranta is our indoor positioning dashboard. It turns location estimates from anonymous test devices into a live view of a building floor. Our current pilot is the first floor of Virginia Tech's Academic Classroom Building.
 
-The app starts in Simulation mode, so it is safe to demo without Raspberry Pis, Wi-Fi capture, or a backend. Six anonymous devices move through classrooms and common areas while four planned anchors report simulated health. Live mode uses the same map and UI, but it stays empty and shows an error if a compatible API is not running. That split is intentional: we can test the product in a smaller space first, then connect the positioning pipeline when the hardware is ready.
+The app starts in Simulation mode, so it is safe to demo without Raspberry Pis, Wi-Fi capture, or a backend. Twenty anonymous devices move through classrooms and common areas while four planned anchors report simulated health. Live mode uses the same map and pages, but it stays honest and shows an error if a compatible API is not running. That split lets us test the product in a smaller space first, then connect the positioning pipeline when the hardware is ready.
 
 ## Run it locally
 
@@ -32,14 +32,17 @@ On macOS or Linux, use the same commands without `.cmd`.
 
 - A real React Three Fiber scene using the supplied Virginia Tech building model, with a readable static floor-plan fallback if WebGL is unavailable.
 - A white-and-black Seuranta interface using the team logo, with green and amber reserved for system state.
-- A first-floor cutaway with orbit, pan, zoom, Overview, Top, Focus, and Reset controls.
-- Six anonymous simulated devices following repeatable routes through learning and circulation spaces.
+- A full-building first render with every modeled floor, plus a Floor 1 cutaway with orbit, pan, zoom, Overview, Top, Focus, Reset, and Walkthrough controls.
+- Twenty anonymous simulated devices following repeatable routes through learning and circulation spaces.
 - Smooth marker movement, confidence values, uncertainty radius, timestamps, and zone names.
 - Four planned anchor locations with online, degraded, and offline states.
 - Search and linked selection between the device list, 3D map, and details panel.
-- Simulation controls for pause, restart, speed, and a weak-signal scenario.
+- Devices, Events, and Reports pages that read from the same provider snapshot as the map. Room and occupancy records stay in that shared model so the numbers do not drift between pages.
+- Simulation controls on the map for pause, restart, speed, and a weak-signal scenario. Simulation is a data mode, not a separate page.
 - Floor calibration and live API settings stored locally in the browser.
 - A strict live provider for scoped REST snapshots and WebSocket updates.
+
+The operations pages are deliberately small and useful for the demo: search an anonymous device, filter by health, open a space, review an event, resolve it, and compare the report cards with the live map. They are all derived from the current snapshot instead of separate fixture arrays.
 
 The default building footprint is about 76.9 m × 44.6 m. That number comes from the supplied reference model and has roughly ±15% scale uncertainty. It is not a survey or BIM. The setup screen lets us replace the floor dimensions, origin, rotation, anchor IDs, and anchor coordinates after measuring the real site.
 
@@ -53,7 +56,7 @@ vt-academic-classroom.meshopt.glb   smaller optimized copy for later use
 vt-academic-classroom.metadata.json source notes, estimated bounds, rooms, and openings
 ```
 
-We use the uncompressed GLB right now because it opens without extra decoder setup. The Meshopt copy is kept for a later performance pass. The app only shows `Floor_01`; the upper floors and roof are still present in the source model.
+We use the uncompressed GLB right now because it opens without extra decoder setup. The Meshopt copy is kept for a later performance pass. The first render keeps the upper floors and roof visible so the building reads as a building; choosing Floor 1 removes the upper floors and roof from the operational view without changing the source model.
 
 ## Simulation and live data
 
@@ -111,9 +114,10 @@ src/
     coordinates.ts           metres, origin, axes, and rotation
     floorDefinition.ts       Virginia Tech floor identity and planned anchors
     roomModel.ts             model asset, calibration, and saved setup
-    simulation.ts            first-floor routes and zone names
-    mockProvider.ts          local demo state
+    simulation.ts            first-floor routes and zone names for 20 demo sessions
+    mockProvider.ts          local demo state and controls
     liveProvider.ts          scoped REST/WebSocket connection
+    workspace.ts             shared devices, spaces, events, and report model
     types.ts                 normalized domain contracts
   App.tsx                    dashboard shell and interactions
   styles.css                layout and visual system
@@ -128,6 +132,6 @@ The demo uses IDs such as `session-a7f3`. Do not add names, MAC addresses, raw p
 
 ## Current checks and limits
 
-ESLint, all 21 tests, and the production build pass. We manually checked the main flow at 1366×768 and 1920×1080. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
+ESLint, all 22 tests, and the production build pass. We manually checked the main flow at 1366×768 and 1920×1080, including navigation between every page and locating a device from the inventory back on the map. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
 
 The model scale and upper floors are estimated, the planned anchor positions have not been surveyed, and no Raspberry Pi service is bundled with this branch. Read [docs/demo-guide.md](docs/demo-guide.md) before presenting and [docs/frontend-architecture.md](docs/frontend-architecture.md) before connecting a backend.

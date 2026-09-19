@@ -12,15 +12,18 @@ src/
     coordinates.ts      floor metres to Three.js world coordinates and back
     floorDefinition.ts  building/floor identity, footprint, zones, and anchors
     roomModel.ts        GLB information, calibration, validation, and local storage
-    simulation.ts       Virginia Tech first-floor routes and zone names
+    simulation.ts       Virginia Tech first-floor routes and zone names for 20 demo sessions
     mockProvider.ts     deterministic simulation snapshots and controls
     liveProvider.ts     scoped REST snapshot and WebSocket update client
+    workspace.ts        shared devices, spaces, events, and report model
     camera.ts           one-shot Focus behavior
     store.ts            selected entity, search, layers, and mode
   components/
     MapCanvas.tsx       R3F model, markers, labels, lighting, and camera controls
+    OperationsPages.tsx Devices, Events, and Reports views
+  operations-pages.css  layout and table styles for the operations views
   brand-system.css      white/black product tokens, logo layout, responsive states, and fallback preview
-  App.tsx               dashboard panels, setup, details, and provider switching
+  App.tsx               dashboard shell, navigation, setup, details, and provider switching
 ```
 
 `App` creates either `MockPositionProvider` or `LivePositionProvider`. Both emit `ProviderSnapshot`, so the map, lists, metrics, and detail panel do not know where the data came from. Marker interpolation runs inside the Three.js frame loop instead of causing a React render for every visual step.
@@ -29,7 +32,7 @@ src/
 
 The runtime model is `public/models/vt-academic-classroom.glb`. The source also includes a Meshopt-compressed copy and a metadata JSON file. The app uses the uncompressed file because it is only about 0.5 MB and does not need a decoder.
 
-The source contains three floors and a roof. `MapCanvas` clones the loaded scene and removes `Floor_02`, `Floor_03`, and `Roof` from the operational view. The original files stay unchanged.
+The source contains three floors and a roof. The default Building view renders the complete scene. Choosing Floor 1 makes a cloned cutaway and removes `Floor_02`, `Floor_03`, and `Roof`; the original files stay unchanged.
 
 If a browser cannot create a WebGL context, the same component renders a lightweight static floor-plan preview with the same anchors and entity selection behavior. That keeps the demo usable on restricted machines without changing the provider or UI contract.
 
@@ -109,7 +112,11 @@ Full snapshots and typed updates must match all four scope IDs. Lower revisions 
 
 ## Simulation provider
 
-The simulation uses six anonymous sessions. Routes are loops traced inside first-floor learning and circulation regions from the supplied metadata. Each snapshot includes positions, confidence, uncertainty radius, timestamps, zone occupancy, events, and node health. Pause stops timestamps and movement, Restart resets route progress, and Weak signal changes confidence and anchor health.
+The simulation uses twenty anonymous sessions. Routes are loops traced inside first-floor learning and circulation regions from the supplied metadata. Each snapshot includes positions, confidence, uncertainty radius, timestamps, zone occupancy, events, and node health. Pause stops timestamps and movement, Restart resets route progress, and Weak signal changes confidence and anchor health.
+
+`src/domain/workspace.ts` turns that provider snapshot into the shared model used by Devices, Events, and Reports. It still keeps room and occupancy records because those records drive event labels and report totals. This keeps the demo consistent: a device selected in the inventory is the same device shown on the map, room occupancy comes from the same positions, and report totals come from the same events. These pages should not add their own fixture arrays.
+
+Simulation controls stay in the Live map detail panel. There is no separate Simulations page because Simulation is a provider mode that should affect the whole workspace.
 
 The simulation is intentionally believable but not presented as measured positioning performance.
 
@@ -128,10 +135,12 @@ Pi observations and heartbeats
 
 The frontend does not implement packet capture, device identity, calibration math for the positioning engine, or Raspberry Pi deployment.
 
-## Current limits
+## Walkthrough and current limits
+
+Walkthrough mode switches the perspective camera to an eye-height first-person controller. WASD moves the camera and the mouse changes the view. Movement is checked against metadata-informed walkable envelopes with overlapping doorway bands, so the demo stays inside the building while still allowing room-to-corridor movement. This is a safe demo navigation layer, not the positioning team's eventual wall graph or a claim of surveyed collision accuracy.
 
 - The Virginia Tech geometry and scale are reference-derived estimates.
-- Upper-floor operational views are not implemented yet, although the model contains them.
+- Upper-floor telemetry views are not implemented yet; the Building view is a complete context view and Floor 1 is the active operational view.
 - Planned anchors need a site survey before live testing.
 - Replay and heatmaps are not implemented.
 - The Three.js bundle triggers Vite's chunk-size advisory, but the build completes.
