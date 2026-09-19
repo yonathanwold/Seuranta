@@ -9,6 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import os
 import random
 import re
 import subprocess
@@ -90,6 +91,36 @@ class SubprocessCommandAdapter(CommandAdapter):
             raise CollectorError("wireless command permission denied") from exc
         except subprocess.TimeoutExpired as exc:
             raise CollectorError("wireless command timed out") from exc
+        if result.returncode != 0:
+            # Do not include command output: it can contain station addresses.
+            raise CollectorError(f"wireless command failed with exit code {result.returncode}")
+        return result.stdout
+
+    def run_with_open_stdin(self, args: Sequence[str], timeout_s: float = 5.0) -> str:
+        """Run a non-interactive scan while retaining an open, private stdin pipe.
+
+        ``btmgmt find`` does not require input, but BlueZ 5.82 stops emitting
+        discovery events when inherited stdin is already closed (as it is for
+        a systemd service using ``StandardInput=null``).  The write end never
+        receives data and is closed immediately after the child exits.
+        """
+
+        if not args or any(not isinstance(arg, str) or not arg for arg in args):
+            raise ValueError("wireless command arguments must be non-empty strings")
+        read_fd, write_fd = os.pipe()
+        try:
+            with os.fdopen(read_fd, "rb") as open_stdin:
+                try:
+                    result = subprocess.run(list(args), stdin=open_stdin, capture_output=True, text=True,
+                                            timeout=timeout_s, check=False)
+                except FileNotFoundError as exc:
+                    raise CollectorError(f"missing wireless command: {args[0]}") from exc
+                except PermissionError as exc:
+                    raise CollectorError("wireless command permission denied") from exc
+                except subprocess.TimeoutExpired as exc:
+                    raise CollectorError("wireless command timed out") from exc
+        finally:
+            os.close(write_fd)
         if result.returncode != 0:
             # Do not include command output: it can contain station addresses.
             raise CollectorError(f"wireless command failed with exit code {result.returncode}")
@@ -231,6 +262,7 @@ def parse_btmgmt_scan(output: str, *, target_name: str, device_token: str,
     channel = _safe_channel(expected_channel)
     rows: list[tuple[str, int, int]] = []
     pending_rssi: Optional[int] = None
+    pending_target_name = False
     for line in output.splitlines():
         clean = _ANSI.sub("", line).strip()
         device = _BTMGMT_DEVICE_FOUND.search(clean)
@@ -238,18 +270,29 @@ def parse_btmgmt_scan(output: str, *, target_name: str, device_token: str,
             rssi = int(device.group("rssi"))
             if not -127 <= rssi <= 0:
                 raise CollectorError("Bluetooth output contained out-of-range RSSI")
-            # Some BlueZ versions put the EIR name on the next line after a
-            # device-found event; retain only the immediately preceding RSSI.
-            pending_rssi = rssi
             name = _BTMGMT_NAME.search(device.group("details"))
-            if name and name.group("name").strip() == target_name:
+            inline_target = bool(name and name.group("name").strip() == target_name)
+            # BlueZ 5.82 can render EIR fields before its device-found line,
+            # while older versions render the name immediately afterwards.
+            # Retain only the adjacent RSSI/name state; Bluetooth addresses
+            # are deliberately never retained or returned.
+            if inline_target or pending_target_name:
                 rows.append((device_token, rssi, channel))
                 pending_rssi = None
+            else:
+                pending_rssi = rssi
+            pending_target_name = False
             continue
         name = _BTMGMT_NAME.match(clean)
-        if name and pending_rssi is not None and name.group("name").strip() == target_name:
-            rows.append((device_token, pending_rssi, channel))
-            pending_rssi = None
+        if name:
+            if name.group("name").strip() == target_name:
+                if pending_rssi is not None:
+                    rows.append((device_token, pending_rssi, channel))
+                    pending_rssi = None
+                else:
+                    pending_target_name = True
+            else:
+                pending_target_name = False
     return rows
 
 
@@ -333,8 +376,11 @@ class BLEAdvertisementCollector(ObservationCollector):
 
     def collect(self) -> list[RawObservation]:
         try:
-            output = self.adapter.run(("btmgmt", "--timeout", str(self.scan_seconds), "find", "-l"),
-                                      timeout_s=float(self.scan_seconds + 3))
+            args = ("btmgmt", "--timeout", str(self.scan_seconds), "find", "-l")
+            timeout_s = float(self.scan_seconds + 3)
+            open_stdin_runner = getattr(self.adapter, "run_with_open_stdin", None)
+            output = (open_stdin_runner(args, timeout_s=timeout_s) if callable(open_stdin_runner)
+                      else self.adapter.run(args, timeout_s=timeout_s))
         except CollectorError:
             output = self.adapter.run(("bluetoothctl", "--timeout", str(self.scan_seconds), "scan", "on"),
                                       timeout_s=float(self.scan_seconds + 3))

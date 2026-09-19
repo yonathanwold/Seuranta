@@ -33,6 +33,16 @@ class FakeAdapter(CommandAdapter):
         return self.output
 
 
+class OpenStdinFakeAdapter(FakeAdapter):
+    def __init__(self, output: str):
+        super().__init__(output)
+        self.open_stdin_used = False
+
+    def run_with_open_stdin(self, args, timeout_s=5.0):
+        self.open_stdin_used = True
+        return self.output
+
+
 class CapturingHttpTransport(HttpTransport):
     def __init__(self):
         super().__init__("http://api.invalid", building_id="building-1", floor_id="1",
@@ -138,10 +148,22 @@ class EdgeTests(unittest.TestCase):
         ))
         rows = parse_btmgmt_scan(btmgmt_scan, target_name="Seuranta-iPhone", device_token="Seuranta-iPhone")
         self.assertEqual(rows, [("Seuranta-iPhone", -58, 37)])
+        # BlueZ 5.82 renders the EIR fields before the device-found line.
+        name_first_scan = "\n".join((
+            "AD flags 0x1a",
+            "name Seuranta-iPhone",
+            "hci0 dev_found: aa:bb:cc:dd:ee:ff type LE Random rssi -63 flags 0x0004",
+        ))
+        rows = parse_btmgmt_scan(name_first_scan, target_name="Seuranta-iPhone", device_token="Seuranta-iPhone")
+        self.assertEqual(rows, [("Seuranta-iPhone", -63, 37)])
         collector = BLEAdvertisementCollector("Seuranta-iPhone", adapter=FakeAdapter(btmgmt_scan))
         readings = collector.collect()
         self.assertEqual([(item.device_token, item.rssi_dbm, item.channel) for item in readings],
                          [("Seuranta-iPhone", -58, 37)])
+        pipe_adapter = OpenStdinFakeAdapter(btmgmt_scan)
+        readings = BLEAdvertisementCollector("Seuranta-iPhone", adapter=pipe_adapter).collect()
+        self.assertTrue(pipe_adapter.open_stdin_used)
+        self.assertEqual(len(readings), 1)
 
     def test_http_transport_normalizes_edge_values_for_the_api(self):
         transport = CapturingHttpTransport()
