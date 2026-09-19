@@ -17,6 +17,7 @@ interface MapCanvasProps {
   showConfidence: boolean
   showZones: boolean
   cameraPreset: 'overview' | 'top' | 'focus'
+  cameraRequest: number
 }
 
 const origin = { xM: demoFloor.widthM / 2, yM: demoFloor.depthM / 2 }
@@ -93,21 +94,26 @@ function EntityMarker({ position, selected, showConfidence, showLabels, onSelect
 const displaySession = (sessionId: string) => sessionId.replace(/^session-/, '').slice(0, 4).toUpperCase()
 const zoneName = (zoneId: string) => ({ office: 'Office zone', meeting: 'Meeting room', common: 'Common area', restricted: 'Restricted', corridor: 'Corridor' }[zoneId] ?? zoneId)
 
-function CameraController({ preset, selected }: { preset: MapCanvasProps['cameraPreset']; selected?: PositionEstimate }) {
+function CameraController({ preset, selected, cameraRequest }: { preset: MapCanvasProps['cameraPreset']; selected?: PositionEstimate; cameraRequest: number }) {
   const { camera } = useThree()
   const controls = useRef<OrbitControlsImpl>(null)
   const cameraTarget = useRef(new THREE.Vector3(27, 25, 27))
   const lookTarget = useRef(new THREE.Vector3(0, 0, 0))
   const transitionActive = useRef(false)
-  const destination = useMemo(() => preset === 'top' ? new THREE.Vector3(0, 42, 0.01) : preset === 'focus' && selected ? (() => { const point = positionToWorld(selected, origin); return new THREE.Vector3(point.x + 13, 20, point.z + 13) })() : new THREE.Vector3(27, 25, 27), [preset, selected])
+  const selectedRef = useRef(selected)
+  selectedRef.current = selected
+  const destination = useMemo(() => {
+    const requestedSelection = cameraRequest >= 0 ? selectedRef.current : undefined
+    return preset === 'top' ? new THREE.Vector3(0, 42, 0.01) : preset === 'focus' && requestedSelection ? (() => { const point = positionToWorld(requestedSelection, origin); return new THREE.Vector3(point.x + 13, 20, point.z + 13) })() : new THREE.Vector3(27, 25, 27)
+  }, [preset, cameraRequest])
   useEffect(() => {
     cameraTarget.current.copy(destination)
     camera.zoom = preset === 'focus' ? 19 : preset === 'top' ? 13 : 11
-    const target = preset === 'focus' && selected ? positionToWorld(selected, origin) : { x: 0, z: 0 }
+    const target = preset === 'focus' && selectedRef.current ? positionToWorld(selectedRef.current, origin) : { x: 0, z: 0 }
     lookTarget.current.set(target.x, 0, target.z)
     transitionActive.current = true
     camera.updateProjectionMatrix()
-  }, [camera, destination, preset, selected])
+  }, [camera, cameraRequest, destination, preset])
   useFrame((_state, delta) => {
     if (transitionActive.current) {
       const amount = Math.min(1, delta * 5.2)
@@ -120,7 +126,7 @@ function CameraController({ preset, selected }: { preset: MapCanvasProps['camera
   return <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={0.08} minZoom={8} maxZoom={30} minPolarAngle={0.45} maxPolarAngle={Math.PI / 2.08} onStart={() => { transitionActive.current = false }} />
 }
 
-function FloorScene({ state, selectedId, onSelect, showEntities, showAnchors, showLabels, showConfidence, showZones, cameraPreset }: MapCanvasProps) {
+function FloorScene({ state, selectedId, onSelect, showEntities, showAnchors, showLabels, showConfidence, showZones, cameraPreset, cameraRequest }: MapCanvasProps) {
   const selected = state.positions.find((position) => position.sessionId === selectedId)
   const nodes = new Map(state.nodes.map((node) => [node.anchorId, node]))
   return <>
@@ -138,13 +144,13 @@ function FloorScene({ state, selectedId, onSelect, showEntities, showAnchors, sh
     {demoFloor.walls.map((wall, index) => <Wall key={`${wall.axis}-${wall.xM}-${wall.yM}-${index}`} {...wall} />)}
     {showAnchors && demoFloor.anchors.map((anchor) => <AnchorMarker key={anchor.anchorId} anchor={anchor} node={nodes.get(anchor.anchorId)} showLabels={showLabels} onSelect={() => onSelect(anchor.anchorId)} />)}
     {showEntities && state.positions.map((position) => <EntityMarker key={position.sessionId} position={position} selected={selectedId === position.sessionId} showConfidence={showConfidence} showLabels={showLabels} onSelect={() => onSelect(position.sessionId)} />)}
-    <CameraController preset={cameraPreset} selected={selected} />
+    <CameraController preset={cameraPreset} selected={selected} cameraRequest={cameraRequest} />
   </>
 }
 
 export function MapCanvas(props: MapCanvasProps) {
   return <div className="map-canvas" aria-label="Interactive 3D floor map">
-    <Canvas shadows orthographic camera={{ position: [27, 25, 27], zoom: 11, near: 0.1, far: 200 }} gl={{ antialias: true }}>
+    <Canvas shadows fallback={<div className="map-fallback-message"><strong>3D map unavailable</strong><span>Use the entity and anchor lists to inspect the last known state.</span></div>} orthographic camera={{ position: [27, 25, 27], zoom: 11, near: 0.1, far: 200 }} gl={{ antialias: true }}>
       <FloorScene {...props} />
     </Canvas>
     <div className="map-scale" aria-hidden="true"><span>0</span><i /><span>5</span><i /><span>10 m</span></div>

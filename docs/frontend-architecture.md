@@ -12,7 +12,7 @@ src/
     coordinates.ts    backend map metres <-> Three world coordinates
     floorDefinition.ts dimensional Riverside Office demo geometry
     mockProvider.ts   deterministic route simulation
-    liveProvider.ts   REST snapshot + WebSocket reconnect boundary
+    liveProvider.ts   scoped REST snapshot + typed WebSocket delta reducer
     store.ts          small Zustand UI state (selection, filters, layers)
   components/
     MapCanvas.tsx     R3F scene, camera presets, markers, and labels
@@ -43,9 +43,9 @@ The UI also normalizes `SpatialEvent` and `NodeHeartbeat`. Event adapters accept
 The live provider targets:
 
 - `GET /api/v1/state` with `run_id`, `deployment_id`, `building_id`, `floor_id`, and `mode` query parameters.
-- `WS /api/v1/live` for an initial snapshot and subsequent `{ type, state_revision, data }` deltas.
+- `WS /api/v1/live` for an initial snapshot and subsequent `{ type, state_revision, data }` deltas. Both requests carry the exact `run_id`, `deployment_id`, `building_id`, `floor_id`, and data-platform mode (`real` or `simulated`) scope. Reconnects include `since_revision`; a `snapshot_required` message forces a full scoped REST refresh.
 
-The REST adapter accepts either a bare object or `{ data: object }`. The WebSocket adapter accepts snapshot/state messages, ignores heartbeat messages, and keeps the last valid state while reconnecting with bounded backoff. An empty initial state is marked partial and shown as an honest empty/unavailable workspace.
+The REST adapter accepts either a bare object or `{ data: object }`. The WebSocket adapter reduces `position`, `node`, and `event` messages by their normalized identity, advances revisions for observation/heartbeat messages, ignores unknown or malformed payloads without replacing the last good state, and keeps that state while reconnecting with bounded backoff. An empty initial state is marked partial and shown as an honest empty/unavailable workspace.
 
 The current data-platform state shape includes `state_revision`, `generated_at`, `counts`, `sessions`, `positions`, `nodes`, `zones`, `zone_metrics`, `recent_events`, `anomalies`, and `is_partial`. The current backend branches differ in mode vocabulary: edge uses uppercase `LIVE`, `REPLAY`, and `SIMULATION`, while data models include lowercase `real` and `simulated`; the adapter maps `REAL`/`PRODUCTION` to `LIVE`, `REPLAY`/`HISTORICAL` to `REPLAY`, and other simulated variants to `SIMULATION`.
 
@@ -59,7 +59,9 @@ The floor-plan origin is its centre `(16 m, 11 m)`. One Three world unit is one 
 
 ## Switching providers
 
-Simulation is default and requires no credentials. The mode controls select `MockPositionProvider` or `LivePositionProvider`; both feed the same normalized state, map, explorer, and detail components. Use `VITE_SEURANTA_API_URL` for a separately hosted API. A same-origin deployment may leave it unset. A future authenticated production adapter should be added outside the domain components and must preserve the anonymous session boundary.
+Simulation is default and requires no credentials. The mode controls select `MockPositionProvider` or `LivePositionProvider`; both feed the same normalized state, map, explorer, and detail components. The UI does not expose Replay because no replay provider is implemented. Building and floor are the current static demo context; unsupported navigation/settings surfaces are omitted instead of rendered as inert controls. Use `VITE_SEURANTA_API_URL` for a separately hosted API. A same-origin deployment may leave it unset. A future authenticated production adapter should be added outside the domain components and must preserve the anonymous session boundary.
+
+The layout is desktop-first with a 1100 px minimum viewport. The 1366 px and 1920 px desktop targets are the supported visual range; narrower screens should use a desktop browser window rather than relying on a mobile layout.
 
 ## Future Pi → positioning → data-platform connection
 

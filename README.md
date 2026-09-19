@@ -31,14 +31,14 @@ npm run lint
 npm run preview
 ```
 
-`npm run build` runs the strict TypeScript build and Vite production build. `npm test` runs the Vitest unit suite for coordinate transforms, wire adapters, and the mock provider. `npm run lint` runs ESLint across the source tree.
+`npm run build` runs the strict TypeScript build and Vite production build. `npm test` runs the Vitest unit suite for coordinate transforms, wire adapters, and both providers. `npm run lint` runs ESLint across the source tree.
 
 ## What is implemented
 
 - A quiet operations-atlas shell with navigation, building/floor context, simulation/live mode, entity explorer, map layers, search, detail panel, recent transitions, and keyboard-visible controls.
 - An elevated orthographic Three.js/R3F floor with dimensional slab, wall segments, room surfaces, labels, four anchor markers, anonymous moving entities, selected confidence/accuracy disc, hover/selected HTML cards, OrbitControls, and Overview/Top/Focus presets.
 - `MockPositionProvider` with five anonymous sessions, route interpolation, confidence, accuracy radius, zones, transition events, and mixed anchor health.
-- `LivePositionProvider` with REST snapshot loading from `GET /api/v1/state` and a reconnecting WebSocket boundary at `/api/v1/live`. The UI receives only normalized domain state.
+- `LivePositionProvider` with scoped REST snapshot loading from `GET /api/v1/state` and a reconnecting, typed-delta WebSocket boundary at `/api/v1/live`. The UI receives only normalized domain state. The demo menu intentionally exposes only Simulation and Live; replay is not presented without a replay provider.
 
 ## Repository guide
 
@@ -47,7 +47,7 @@ npm run preview
 - `src/domain/coordinates.ts` — tested backend metre to Three world transform.
 - `src/domain/floorDefinition.ts` — demo floor dimensions, walls, rooms, zones, and anchor coordinates.
 - `src/domain/mockProvider.ts` / `src/domain/liveProvider.ts` — provider implementations.
-- `src/components/MapCanvas.tsx` — R3F floor scene, camera, marker interactions, and fallback plan.
+- `src/components/MapCanvas.tsx` — R3F floor scene, camera, marker interactions, and a real WebGL fallback boundary; the entity/anchor explorer remains usable if Canvas cannot initialize.
 - `src/App.tsx` / `src/styles.css` — application composition and design system.
 - `docs/frontend-architecture.md` — contracts, provider switching, integration assumptions, and future connection path.
 - `SEURANTA_CONTINUATION_PROMPT.md` — handoff and continuation runbook.
