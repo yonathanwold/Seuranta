@@ -41,8 +41,12 @@ On macOS or Linux, use the same commands without `.cmd`.
 - Simulation controls on the map for pause, restart, speed, and a weak-signal scenario. Simulation is a data mode, not a separate page.
 - Floor calibration and live API settings stored locally in the browser.
 - A strict live provider for scoped REST snapshots and WebSocket updates.
+- A selectable 2D preview for restricted browsers, keyboard focus in Floor setup, and reduced-motion camera transitions.
+- Current-snapshot reports with a real local JSON download. No invented battery levels, signal readings, uptime history, or report schedules.
 
-The operations pages are deliberately small and useful for the demo: search an anonymous device, filter by health, open a space, review an event, resolve it, and compare the report cards with the live map. They are all derived from the current snapshot instead of separate fixture arrays.
+The operations pages are deliberately small and useful for the demo: search an anonymous device, filter by health, locate it on the map, review an event, acknowledge it locally, and compare the report cards with the map. They are all derived from the current snapshot instead of separate fixture arrays.
+
+Device health comes from position confidence and age relative to the snapshot. It is not a hardware heartbeat. Room names are shared across pages, and occupancy counts anonymous devices, not people. Resolving an event is a clearly labeled local demo action; it survives page navigation and clears when you reload, switch sources, change setup, restart, or change scenarios.
 
 The default building footprint is about 76.9 m × 44.6 m. That number comes from the supplied reference model and has roughly ±15% scale uncertainty. It is not a survey or BIM. The setup screen lets us replace the floor dimensions, origin, rotation, anchor IDs, and anchor coordinates after measuring the real site.
 
@@ -132,6 +136,6 @@ The demo uses IDs such as `session-a7f3`. Do not add names, MAC addresses, raw p
 
 ## Current checks and limits
 
-ESLint, all 22 tests, and the production build pass. We manually checked the main flow at 1366×768 and 1920×1080, including navigation between every page and locating a device from the inventory back on the map. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
+ESLint, all 29 tests, and the production build pass. V2 adds regression coverage for shared workspace values and walkthrough bounds. We manually checked the main flow at 1366×768 and 1920×1080, including navigation between every page and locating a device from the inventory back on the map. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
 
-The model scale and upper floors are estimated, the planned anchor positions have not been surveyed, and no Raspberry Pi service is bundled with this branch. Read [docs/demo-guide.md](docs/demo-guide.md) before presenting and [docs/frontend-architecture.md](docs/frontend-architecture.md) before connecting a backend.
+The model scale and upper floors are estimated, the planned anchor positions have not been surveyed, and no Raspberry Pi service is bundled with this branch. The V2 review started from remote `main` at `7d452a5`. See [docs/v2-review.md](docs/v2-review.md) for the checks and remaining limits. Read [docs/demo-guide.md](docs/demo-guide.md) before presenting and [docs/frontend-architecture.md](docs/frontend-architecture.md) before connecting a backend.

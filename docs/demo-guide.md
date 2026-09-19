@@ -18,11 +18,14 @@ Open `http://127.0.0.1:4173/`.
 3. Select `Device A7F3`. Show its coordinates, confidence, uncertainty radius, zone, and update time.
 4. Search for `E5F6`, select it, and press Focus. The camera moves once and then leaves manual control alone.
 5. Switch between Top and Overview. Drag to orbit or pan and scroll to zoom.
-6. Click Walkthrough, click the map, and use W A S D plus the mouse to look around the building. Explain that the demo keeps movement inside modeled walkable regions and leaves the final floor graph to the live integration.
+6. Click Walkthrough, use W A S D to move, drag the mouse to look, or use arrow keys to turn. Explain that the demo keeps movement inside modeled walkable regions and leaves the final floor graph to the live integration. Escape exits; clicking outside the canvas stops movement.
 7. Toggle Devices, Anchors, Labels, Uncertainty, or Floor overlay in Map layers.
 8. Pause and resume the simulation. Restart resets the routes. Weak signal lowers one device's confidence and degrades one anchor.
 9. Open Floor setup. Show the floor dimensions, origin, yaw, anchor IDs, anchor coordinates, and exact live scope fields.
-10. Switch to Live. With no API running, the app shows zero devices, planned anchors as offline, and `Live source unavailable`. Switch back to Demo to finish.
+10. Open Devices, search `E5F6`, then Locate in map. Pause first if you want to compare exact coordinates.
+11. Open Events, select an event, and Resolve · demo. Reports shows the same local acknowledgment count. Download snapshot JSON produces a local file with the current values.
+12. Use 2D preview to show the selectable fallback. Switch back with 3D map.
+13. Switch to Live. With no API running, the app shows zero devices, planned anchors as offline, and `Live source unavailable`. Switch back to Demo to finish.
 
 ## Small pilot checklist
 
@@ -48,3 +51,5 @@ Before testing with Raspberry Pis in the building:
 - Planned anchors are not installed or measured anchors.
 - Simulated confidence is demo data, not a benchmark of the final positioning system.
 - Live mode is ready for the documented API, but this frontend branch does not bundle the Pi, positioning, or data-platform services.
+
+Health labels describe position age and confidence, not physical device connectivity. We do not have battery readings or historical uptime. The Building view draws Floor 1 markers over geometry for readability; use the cutaway to interpret their location.

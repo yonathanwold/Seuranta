@@ -17,6 +17,7 @@ src/
     liveProvider.ts     scoped REST snapshot and WebSocket update client
     workspace.ts        shared devices, spaces, events, and report model
     camera.ts           one-shot Focus behavior
+    walkthrough.ts      bounded movement through the shared floor envelope
     store.ts            selected entity, search, layers, and mode
   components/
     MapCanvas.tsx       R3F model, markers, labels, lighting, and camera controls
@@ -137,10 +138,18 @@ The frontend does not implement packet capture, device identity, calibration mat
 
 ## Walkthrough and current limits
 
-Walkthrough mode switches the perspective camera to an eye-height first-person controller. WASD moves the camera and the mouse changes the view. Movement is checked against metadata-informed walkable envelopes with overlapping doorway bands, so the demo stays inside the building while still allowing room-to-corridor movement. This is a safe demo navigation layer, not the positioning team's eventual wall graph or a claim of surveyed collision accuracy.
+Walkthrough mode switches the perspective camera to an eye-height first-person controller. WASD moves the camera while the canvas has keyboard focus. Drag the mouse to look, or use arrow keys to turn. Escape or any camera preset exits walking. Input clears on blur, and clicking a marker while walking does not select it. The camera readout updates a DOM output without rerendering the React tree every frame. Movement is capped after slow frames and sampled in steps of at most 5 cm against metadata-informed walkable envelopes with overlapping doorway bands, so the demo stays inside the building while still allowing room-to-corridor movement. Blocked movement slides along envelope edges. Origins, calibrated dimensions, and yaw use the same coordinate transforms as telemetry. This is a demo navigation layer, not the positioning team's eventual wall graph or a claim of surveyed collision accuracy.
 
 - The Virginia Tech geometry and scale are reference-derived estimates.
 - Upper-floor telemetry views are not implemented yet; the Building view is a complete context view and Floor 1 is the active operational view.
 - Planned anchors need a site survey before live testing.
 - Replay and heatmaps are not implemented.
 - The Three.js bundle triggers Vite's chunk-size advisory, but the build completes.
+
+## V2 workspace behavior
+
+`workspace.ts` supplies room labels, device health, event descriptions, and report counts. A position is stale when it is over 30 seconds older than the provider snapshot, degraded when confidence is below 72% or it is outside the map, and otherwise online. This avoids aging a paused simulation and does not claim a hardware heartbeat. Unknown zones stay unassigned; historical event rooms use event fields, never a device’s later position.
+
+Local event acknowledgments live in App, keyed by mode, all four scope IDs, event ID, and occurrence time. Both Events and Reports consume this state. No provider object is mutated and no resolution API is claimed. Reports distinguish the returned event window from the provider’s hourly total. The JSON export captures the current normalized snapshot, including anonymous sessions, room counts, and local event review state; it is not a scheduled or historical report.
+
+The model remains the uncompressed GLB. Camera presets fit the available aspect ratio and yield to manual orbit; reduced-motion users get an immediate preset change. Device spheres interpolate in the frame loop without React resetting their position on every telemetry tick. Markers are drawn over geometry to keep Floor 1 telemetry visible in Building view; they are not upper-floor positions. The old fixed scale bar and north arrow were removed because they did not follow camera zoom or rotation.
