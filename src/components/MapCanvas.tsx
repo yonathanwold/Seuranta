@@ -84,11 +84,11 @@ function EntityMarker({ position, selected, showConfidence, showLabels, onSelect
   return <group ref={group} position={[target.x, target.y, target.z]} onClick={(event) => { event.stopPropagation(); onSelect() }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
     {showConfidence && (selected || hovered) && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.44, 0]}>
       <circleGeometry args={[radius, 48]} />
-      <meshBasicMaterial color="#087f78" transparent opacity={selected ? 0.16 : 0.07} depthWrite={false} />
+      <meshBasicMaterial color="#151515" transparent opacity={selected ? 0.12 : 0.05} depthWrite={false} />
     </mesh>}
     <mesh castShadow>
       <sphereGeometry args={[selected ? 0.16 : 0.12, 20, 14]} />
-      <meshStandardMaterial color="#087f78" emissive="#075e59" emissiveIntensity={selected ? 0.2 : 0.03} roughness={0.45} />
+      <meshStandardMaterial color="#151515" emissive="#151515" emissiveIntensity={selected ? 0.18 : 0.02} roughness={0.45} />
     </mesh>
     {(showLabels && (hovered || selected)) && <Html position={[0, 0.65, 0]} center zIndexRange={[1, 5]}>
       <div className={`scene-label ${selected ? 'is-selected' : ''}`}><span className="scene-label-dot" /><span><strong>Device {displaySession(position.sessionId)}</strong><small>{Math.round(position.confidence * 100)}% confidence · {position.accuracyRadiusM.toFixed(1)} m radius</small></span></div>
@@ -158,11 +158,29 @@ function FloorScene({ state, roomConfig, selectedId, onSelect, showEntities, sho
   </>
 }
 
+function FloorFallback({ state, roomConfig, selectedId, onSelect, showEntities, showAnchors, showLabels }: Pick<MapCanvasProps, 'state' | 'roomConfig' | 'selectedId' | 'onSelect' | 'showEntities' | 'showAnchors' | 'showLabels'>) {
+  const { widthM, depthM } = roomDimensions(roomConfig)
+  const point = (xM: number, yM: number) => ({ left: `${Math.max(2, Math.min(98, xM / widthM * 100))}%`, top: `${Math.max(2, Math.min(98, (1 - yM / depthM) * 100))}%` })
+  return <div className="room-dom-fallback" aria-label="Static floor plan preview">
+    <div className="floor-plan-fallback">
+      <div className="floor-plan-heading"><strong>VT ACB · Floor 1</strong><span>Static preview · WebGL unavailable</span></div>
+      <div className="floor-plan-corridor" />
+      <div className="floor-plan-room room-north"><span>North classrooms</span></div>
+      <div className="floor-plan-room room-west"><span>West learning wing</span></div>
+      <div className="floor-plan-room room-east"><span>East learning wing</span></div>
+      <div className="floor-plan-room room-south"><span>South collaboration</span></div>
+      {showAnchors && roomConfig.anchors.map((anchor) => <button key={anchor.anchorId} className="fallback-anchor" style={point(anchor.xM, anchor.yM)} onClick={() => onSelect(anchor.anchorId)} aria-label={`Select ${anchor.label}`}><span />{showLabels && <small>{anchor.label}</small>}</button>)}
+      {showEntities && state.positions.map((position) => <button key={position.sessionId} className={`fallback-entity ${selectedId === position.sessionId ? 'is-selected' : ''}`} style={point(position.xM, position.yM)} onClick={() => onSelect(position.sessionId)} aria-label={`Select Device ${displaySession(position.sessionId)}`}><span />{showLabels && (selectedId === position.sessionId) && <small>Device {displaySession(position.sessionId)}</small>}</button>)}
+      <div className="floor-plan-note">Select a device or anchor to inspect telemetry.</div>
+    </div>
+  </div>
+}
+
 export function MapCanvas(props: MapCanvasProps) {
   const [webglReady, setWebglReady] = useState(false)
   return <div className="map-canvas" aria-label="Interactive Virginia Tech first-floor map">
-    {!webglReady && <div className="room-dom-fallback" aria-label="Room model fallback"><div className="room-fallback-shell"><div className="room-fallback-wall wall-north" /><div className="room-fallback-wall wall-west" /><div className="room-fallback-wall wall-east" /><div className="room-fallback-wall wall-south" /><div className="room-fallback-table" /><div className="room-fallback-sideboard" /><span>3D room view unavailable</span><small>Use the lists to inspect telemetry</small></div></div>}
-    <Canvas onCreated={({ gl }) => setWebglReady(Boolean(gl.getContext?.()?.drawingBufferWidth))} shadows fallback={<div className="map-fallback-message"><strong>3D floor view unavailable</strong><span>Use the device and anchor lists to inspect the last known state. The model is still available for calibration in Floor setup.</span></div>} orthographic camera={{ position: [65, 58, 65], zoom: 5, near: 0.1, far: 300 }} gl={{ antialias: true }}>
+    {!webglReady && <FloorFallback {...props} />}
+    <Canvas onCreated={({ gl }) => setWebglReady(Boolean(gl.getContext?.()?.drawingBufferWidth))} shadows fallback={null} orthographic camera={{ position: [65, 58, 65], zoom: 5, near: 0.1, far: 300 }} gl={{ antialias: true }}>
       <Suspense fallback={<Html center><div className="model-loading">Loading Virginia Tech floor…</div></Html>}><FloorScene {...props} /></Suspense>
     </Canvas>
     <div className="map-scale" aria-hidden="true"><span>0</span><i /><span>1</span><i /><span>2 m</span></div>

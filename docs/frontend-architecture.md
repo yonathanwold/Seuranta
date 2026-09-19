@@ -19,6 +19,7 @@ src/
     store.ts            selected entity, search, layers, and mode
   components/
     MapCanvas.tsx       R3F model, markers, labels, lighting, and camera controls
+  brand-system.css      white/black product tokens, logo layout, responsive states, and fallback preview
   App.tsx               dashboard panels, setup, details, and provider switching
 ```
 
@@ -29,6 +30,8 @@ src/
 The runtime model is `public/models/vt-academic-classroom.glb`. The source also includes a Meshopt-compressed copy and a metadata JSON file. The app uses the uncompressed file because it is only about 0.5 MB and does not need a decoder.
 
 The source contains three floors and a roof. `MapCanvas` clones the loaded scene and removes `Floor_02`, `Floor_03`, and `Roof` from the operational view. The original files stay unchanged.
+
+If a browser cannot create a WebGL context, the same component renders a lightweight static floor-plan preview with the same anchors and entity selection behavior. That keeps the demo usable on restricted machines without changing the provider or UI contract.
 
 Metadata says:
 

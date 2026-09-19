@@ -1,8 +1,10 @@
 # Seuranta
 
+![Seuranta logo](public/brand/seuranta-logo.png)
+
 Seuranta is our indoor positioning dashboard. It turns location estimates from anonymous test devices into a live 3D view of a building floor. Our current pilot is the first floor of Virginia Tech's Academic Classroom Building.
 
-The app starts in Simulation mode, so it is safe to demo without Raspberry Pis, Wi-Fi capture, or a backend. Six anonymous devices move through classrooms and common areas while four planned anchors report simulated health. Live mode uses the same map and UI, but it stays empty and shows an error if a compatible API is not running.
+The app starts in Simulation mode, so it is safe to demo without Raspberry Pis, Wi-Fi capture, or a backend. Six anonymous devices move through classrooms and common areas while four planned anchors report simulated health. Live mode uses the same map and UI, but it stays empty and shows an error if a compatible API is not running. That split is intentional: we can test the product in a smaller space first, then connect the positioning pipeline when the hardware is ready.
 
 ## Run it locally
 
@@ -26,9 +28,10 @@ npm.cmd run preview
 
 On macOS or Linux, use the same commands without `.cmd`.
 
-## What works
+## What works right now
 
-- A real React Three Fiber scene using the supplied Virginia Tech building model.
+- A real React Three Fiber scene using the supplied Virginia Tech building model, with a readable static floor-plan fallback if WebGL is unavailable.
+- A white-and-black Seuranta interface using the team logo, with green and amber reserved for system state.
 - A first-floor cutaway with orbit, pan, zoom, Overview, Top, Focus, and Reset controls.
 - Six anonymous simulated devices following repeatable routes through learning and circulation spaces.
 - Smooth marker movement, confidence values, uncertainty radius, timestamps, and zone names.
@@ -125,6 +128,6 @@ The demo uses IDs such as `session-a7f3`. Do not add names, MAC addresses, raw p
 
 ## Current checks and limits
 
-ESLint, all 20 tests, and the production build pass. We manually checked the main flow at 1366×768 and 1920×1080. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
+ESLint, all 21 tests, and the production build pass. We manually checked the main flow at 1366×768 and 1920×1080. The production build still prints a chunk-size warning because Three.js is large; it does not stop the build.
 
 The model scale and upper floors are estimated, the planned anchor positions have not been surveyed, and no Raspberry Pi service is bundled with this branch. Read [docs/demo-guide.md](docs/demo-guide.md) before presenting and [docs/frontend-architecture.md](docs/frontend-architecture.md) before connecting a backend.
