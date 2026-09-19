@@ -17,6 +17,7 @@ from seuranta_edge.collectors import (
     CollectorError,
     parse_station_dump,
     parse_bluetooth_scan,
+    parse_btmgmt_scan,
 )
 from seuranta_edge.config import EdgeConfig, config_from_defaults, load_config
 from seuranta_edge.contracts import NodeHeartbeat, ObservationBatch, Session, SignalObservation, utc_now
@@ -119,15 +120,24 @@ class EdgeTests(unittest.TestCase):
         self.assertEqual(monitor.collect()[0].rssi_dbm, -60)
 
     def test_bluetooth_collector_uses_only_target_rssi_metadata(self):
-        scan = "\n".join((
+        bluetoothctl_scan = "\n".join((
             "[NEW] Device aa:bb:cc:dd:ee:ff Seuranta-iPhone",
             "[CHG] Device aa:bb:cc:dd:ee:ff RSSI: -58",
             "[NEW] Device 11:22:33:44:55:66 Someone-Else",
             "[CHG] Device 11:22:33:44:55:66 RSSI: -41",
         ))
-        rows = parse_bluetooth_scan(scan, target_name="Seuranta-iPhone", device_token="Seuranta-iPhone")
+        rows = parse_bluetooth_scan(bluetoothctl_scan, target_name="Seuranta-iPhone",
+                                    device_token="Seuranta-iPhone")
         self.assertEqual(rows, [("Seuranta-iPhone", -58, 37)])
-        collector = BLEAdvertisementCollector("Seuranta-iPhone", adapter=FakeAdapter(scan))
+        btmgmt_scan = "\n".join((
+            "hci0 dev_found: aa:bb:cc:dd:ee:ff type LE Random rssi -58 flags 0x00000000 "
+            "AD flags 0x06 name Seuranta-iPhone",
+            "hci0 dev_found: 11:22:33:44:55:66 type LE Random rssi -41 flags 0x00000000 "
+            "AD flags 0x06 name Someone-Else",
+        ))
+        rows = parse_btmgmt_scan(btmgmt_scan, target_name="Seuranta-iPhone", device_token="Seuranta-iPhone")
+        self.assertEqual(rows, [("Seuranta-iPhone", -58, 37)])
+        collector = BLEAdvertisementCollector("Seuranta-iPhone", adapter=FakeAdapter(btmgmt_scan))
         readings = collector.collect()
         self.assertEqual([(item.device_token, item.rssi_dbm, item.channel) for item in readings],
                          [("Seuranta-iPhone", -58, 37)])

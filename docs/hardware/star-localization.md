@@ -87,9 +87,28 @@ Use [`edge/pi-agent/example-ble-config.json`](../../edge/pi-agent/example-ble-co
 as a template for each Pi.  Give each Pi a distinct `anchor_id`, `anchor_x`,
 and `anchor_y`; keep the same `deployment_id`, `building_id`, API URL,
 `ble_target_name`, and run secret on all four Pis.  The agent runs
-`bluetoothctl` for short scans and emits only RSSI for the exact configured
-name.  Before deployment, confirm the Pi has a working Bluetooth controller
-and that the scanner output contains RSSI updates for the advertiser.
+`btmgmt --timeout … find -l` for short BLE scans and emits only RSSI for the
+exact configured name. This is important for iPhone advertisers: BlueZ's
+ordinary `bluetoothctl` scan can see the name without producing a usable RSSI
+event.
+
+`btmgmt` uses BlueZ's management socket. Keep the agent as the dedicated
+`seuranta` user and scope the required Linux capability to its systemd service
+rather than running the full agent as root:
+
+```ini
+# sudo systemctl edit seuranta-edge
+[Service]
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+```
+
+Restart the service after adding the drop-in. `CAP_NET_ADMIN` is a powerful
+networking capability, so reserve this configuration for the dedicated demo
+service and protect its installation directory from untrusted writes.
+
+Before deployment, confirm the Pi has a working Bluetooth controller and that
+the scanner output contains RSSI updates for the advertiser.
 
 The iPhone hotspot is acceptable as a short-demo backhaul, but it moves with
 the device being located.  A stationary Ethernet switch or access point is the

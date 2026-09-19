@@ -103,6 +103,15 @@ _CHANNEL = re.compile(r"\bchannel\s+(\d{1,3})\b", re.IGNORECASE)
 _BT_DEVICE_EVENT = re.compile(r"\bDevice\s+(?P<address>[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})\s+(?P<detail>.+)$")
 _BT_RSSI = re.compile(r"^RSSI:\s*(?P<rssi>-?\d{1,3})$", re.IGNORECASE)
 _BT_NAME = re.compile(r"^(?:Name|Alias):\s*(?P<name>.+)$", re.IGNORECASE)
+# The Bluetooth address is deliberately matched but never captured or returned.
+# `btmgmt find -l` includes RSSI and the advertised local name in one event,
+# unlike bluetoothctl, which may suppress RSSI updates for iOS peripherals.
+_BTMGMT_DEVICE_FOUND = re.compile(
+    r"\bdev_found:\s+(?:[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})\s+"
+    r"type\s+.+?\s+rssi\s+(?P<rssi>-?\d{1,3})\s+flags\s+\S+(?P<details>.*)$",
+    re.IGNORECASE,
+)
+_BTMGMT_NAME = re.compile(r"\bname\s+(?P<name>.+?)\s*$", re.IGNORECASE)
 _ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
@@ -206,6 +215,35 @@ def parse_bluetooth_scan(output: str, *, target_name: str, device_token: str,
     return rows
 
 
+def parse_btmgmt_scan(output: str, *, target_name: str, device_token: str,
+                      expected_channel: int = 37) -> list[tuple[str, int, int]]:
+    """Extract opted-in BLE RSSI metadata from BlueZ management scan output.
+
+    `btmgmt find -l` reports each LE advertisement's local name and RSSI in
+    one line. Its transient Bluetooth address is matched only to validate the
+    event format; it is not captured, returned, logged, or sent to the API.
+    """
+
+    if not isinstance(output, str):
+        raise CollectorError("Bluetooth output was not text")
+    if not target_name or not device_token:
+        raise ValueError("target_name and device_token are required")
+    channel = _safe_channel(expected_channel)
+    rows: list[tuple[str, int, int]] = []
+    for line in output.splitlines():
+        device = _BTMGMT_DEVICE_FOUND.search(_ANSI.sub("", line).strip())
+        if not device:
+            continue
+        name = _BTMGMT_NAME.search(device.group("details"))
+        if not name or name.group("name").strip() != target_name:
+            continue
+        rssi = int(device.group("rssi"))
+        if not -127 <= rssi <= 0:
+            raise CollectorError("Bluetooth output contained out-of-range RSSI")
+        rows.append((device_token, rssi, channel))
+    return rows
+
+
 class APStationCollector(ObservationCollector):
     """Collect associated-station RSSI from an access point interface."""
 
@@ -268,8 +306,10 @@ class BLEAdvertisementCollector(ObservationCollector):
 
     Bluetooth remains independent of the Pi's Wi-Fi backhaul, so this works
     with the iPhone hotspot network while avoiding unsupported Wi-Fi monitor
-    mode on the built-in Pi radio.  The phone needs to advertise the exact
-    configured local name from a consented Seuranta demo app.
+    mode on the built-in Pi radio. The preferred BlueZ management scan emits
+    the local name and RSSI together, which is reliable for the iPhone
+    advertiser. A bluetoothctl fallback supports unprivileged installations
+    that expose RSSI events there.
     """
 
     def __init__(self, target_name: str, *, scan_seconds: int = 3,
@@ -283,14 +323,20 @@ class BLEAdvertisementCollector(ObservationCollector):
         self.adapter = adapter or SubprocessCommandAdapter()
 
     def collect(self) -> list[RawObservation]:
-        output = self.adapter.run(("bluetoothctl", "--timeout", str(self.scan_seconds), "scan", "on"),
-                                  timeout_s=float(self.scan_seconds + 3))
+        try:
+            output = self.adapter.run(("btmgmt", "--timeout", str(self.scan_seconds), "find", "-l"),
+                                      timeout_s=float(self.scan_seconds + 3))
+        except CollectorError:
+            output = self.adapter.run(("bluetoothctl", "--timeout", str(self.scan_seconds), "scan", "on"),
+                                      timeout_s=float(self.scan_seconds + 3))
+            rows = parse_bluetooth_scan(output, target_name=self.target_name, device_token=self.target_name)
+        else:
+            rows = parse_btmgmt_scan(output, target_name=self.target_name, device_token=self.target_name)
         now = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         # The advertised name is intentionally the raw token only in memory;
         # EdgeAgent immediately maps it to a run-scoped HMAC session ID.
         return [RawObservation(token, rssi, channel, now)
-                for token, rssi, channel in parse_bluetooth_scan(output, target_name=self.target_name,
-                                                                   device_token=self.target_name)]
+                for token, rssi, channel in rows]
 
 
 def inspect_interface(interface: str, *, adapter: Optional[CommandAdapter] = None) -> dict[str, object]:
