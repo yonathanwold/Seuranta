@@ -15,8 +15,8 @@ Continue the Seuranta frontend in `https://github.com/yonathanwold/Seuranta.git`
 
 - Repository: `https://github.com/yonathanwold/Seuranta.git`
 - Current branch: `team/app`
-- Handoff baseline commit: `1ce47b1` (current main/team/app baseline). The preceding implementation commit is `db45db9` (`feat(map): add building overview and first-person walkthrough`). Run `git rev-parse --short HEAD` after checkout for the newest commit.
-- Run `git rev-parse HEAD` after checkout for the exact newest handoff commit.
+- Handoff baseline: the current `main` / `team/app` remote state at the time this prompt was written. Run `git rev-parse --short HEAD` after checkout for the exact commit you received; do not rely on a copied SHA in this document.
+- The first full-building / walkthrough implementation landed in `db45db9`; later commits clean up the handoff, remove the old Spaces page code, and keep the branches synchronized.
 
 `team/app` is an orphan frontend history. It has no merge base with the three backend team branches. Do not merge those histories into this branch, force-push, or rewrite another team's branch.
 
