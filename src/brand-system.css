@@ -18,8 +18,9 @@ body { background: var(--surface); color: var(--ink); }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .app-shell { grid-template-columns: 218px minmax(0, 1fr); background: var(--surface); }
 .navigation { padding: 22px 14px 16px; color: var(--ink); background: var(--surface); border-right: 1px solid var(--line); }
-.brand { min-height: 118px; display: grid; place-items: center; padding: 0 6px 24px; border-bottom: 1px solid var(--line); }
-.brand-logo { display: block; width: min(162px, 100%); height: 114px; object-fit: contain; border-radius: 4px; }
+.brand { min-height: 144px; display: grid; grid-template-rows: 88px auto; align-content: center; gap: 5px; place-items: center; padding: 0 6px 16px; border-bottom: 1px solid var(--line); }
+.brand-logo { display: block; width: min(162px, 100%); height: 88px; object-fit: contain; border-radius: 4px; }
+.brand-subtext { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .11em; line-height: 1.3; text-align: center; white-space: nowrap; }
 .brand-logo-mark { display: none; width: 36px; height: 36px; object-fit: cover; border-radius: 4px; }
 .brand-mark { display: none; }
 .nav-caption { margin: 22px 10px 9px; color: #8b8b8b; font-size: 10px; letter-spacing: .16em; }
@@ -165,8 +166,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 @media (max-width: 1210px) {
   .app-shell { grid-template-columns: 66px minmax(0, 1fr); }
   .navigation { padding: 18px 8px 13px; }
-  .brand { min-height: 56px; padding: 0 0 18px; }
+  .brand { min-height: 56px; grid-template-rows: 36px; gap: 0; padding: 0 0 18px; }
   .brand-logo { display: none; }
+  .brand-subtext { display: none; }
   .brand-logo-mark { display: block; }
   .nav-caption, .nav-item span, .nav-mode, .privacy-note, .profile, .setup-link span, .setup-link svg:last-child { display: none; }
   .nav-item { width: 46px; padding: 0; justify-content: center; }
