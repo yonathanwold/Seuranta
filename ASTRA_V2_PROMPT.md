@@ -8,7 +8,7 @@ You are taking over the Seuranta repository for a final UI, UX, and integration-
 - Baseline branch: `main`
 - Current app branch: `team/app`
 - V2 branch to create and push: `team/app-v2`
-- Latest baseline commit at handoff: `73974a9`. Still run `git rev-parse --short HEAD` after checkout so you are working from the exact remote state.
+- Latest baseline commit at handoff: `1ce47b1`. Still run `git rev-parse --short HEAD` after checkout so you are working from the exact remote state.
 - Branches already inspected: `team/edge`, `team/data-platform`, `team/positioning`, and `team/app`.
 
 Start by running:
