@@ -243,11 +243,18 @@ def tracker_scope(rt: Runtime, payload: Any) -> TrackingScope:
 
 
 async def persist_tracker_result(rt: Runtime, result: IngestResult) -> dict[str, Any]:
+    session_view: dict[str, Any] | None = None
     if result.session_created:
         rt.store.add_session(rt.tracking.session_create(result.session))
+        session_view = next(
+            (item for item in rt.tracking.sessions_for(result.session.scope) if item["session_id"] == result.session.session_id),
+            None,
+        )
         logger.info("tracker connected %s", result.session.session_id)
 
     if result.position is None:
+        if session_view is not None:
+            await rt.publish("session", session_view)
         return {
             "status": "calibration_required" if result.calibration_required else "accepted",
             "session_id": result.session.session_id,
@@ -258,6 +265,12 @@ async def persist_tracker_result(rt: Runtime, result: IngestResult) -> dict[str,
     if inserted:
         await rt.publish("position", result.position)
         logger.info("position updated %s", result.session.session_id)
+    if session_view is not None:
+        session_view = next(
+            (item for item in rt.tracking.sessions_for(result.session.scope) if item["session_id"] == result.session.session_id),
+            session_view,
+        )
+        await rt.publish("session", session_view)
     return {
         "status": "live",
         "session_id": result.session.session_id,
@@ -295,6 +308,19 @@ async def end_session(session_id: str, body: SessionEnd, rt: Runtime = Depends(r
     payload = rt.store.end_session(session_id, body.ended_at)
     if payload is None:
         raise HTTPException(404, {"message": "session not found", "session_id": session_id})
+    # Browser tracker sessions live in the in-memory overlay as well as the
+    # durable session history.  Revoke that overlay immediately so Stop
+    # Sharing removes the marker without waiting for expiry.
+    tracker_scope = TrackingScope(
+        payload["run_id"], payload["deployment_id"], payload["building_id"], payload["floor_id"]
+    )
+    try:
+        rt.tracking.end_session(session_id, tracker_scope, body.ended_at)
+    except ValueError:
+        # Durable non-tracker sessions retain the existing sessions API
+        # behavior; only anonymous browser tracker IDs are in this overlay.
+        pass
+    await rt.expire_tracker_sessions()
     await rt.publish("session_ended", payload)
     return {"data": payload}
 
@@ -434,7 +460,14 @@ async def calibrate_tracker(payload: TrackerCalibration, rt: Runtime = Depends(r
         )
     except ValueError as exc:
         raise HTTPException(422, {"message": str(exc), "code": "calibration_error"}) from exc
-    rt.store.add_session(rt.tracking.session_create(session))
+    _, duplicate = rt.store.add_session(rt.tracking.session_create(session))
+    if not duplicate:
+        session_view = next(
+            (item for item in rt.tracking.sessions_for(scope) if item["session_id"] == session.session_id),
+            None,
+        )
+        if session_view is not None:
+            await rt.publish("session", session_view)
     position_response = await materialize_calibrated_position(rt, session, scope)
     logger.info("session calibrated %s", session.session_id)
     return {
@@ -450,7 +483,10 @@ async def calibrate_tracker(payload: TrackerCalibration, rt: Runtime = Depends(r
 @app.post("/api/v1/telemetry/location")
 async def tracker_location_rest(payload: TrackerLocation, rt: Runtime = Depends(runtime)):
     scope = tracker_scope(rt, payload)
-    result = rt.tracking.ingest_location(payload, scope)
+    try:
+        result = rt.tracking.ingest_location(payload, scope)
+    except ValueError as exc:
+        raise HTTPException(409, {"message": str(exc), "code": "tracker_session_ended"}) from exc
     return {"data": await persist_tracker_result(rt, result)}
 
 
@@ -459,7 +495,10 @@ async def dev_position(payload: DevPositionRequest, rt: Runtime = Depends(runtim
     if not rt.settings.dev_mode:
         raise HTTPException(404, {"message": "development position injection is disabled"})
     scope = tracker_scope(rt, payload)
-    result = rt.tracking.ingest_dev_position(payload, scope)
+    try:
+        result = rt.tracking.ingest_dev_position(payload, scope)
+    except ValueError as exc:
+        raise HTTPException(409, {"message": str(exc), "code": "tracker_session_ended"}) from exc
     return {"data": await persist_tracker_result(rt, result)}
 
 
@@ -617,6 +656,12 @@ async def tracker(websocket: WebSocket):
                     connected_scope = scope
                     if created:
                         rt.store.add_session(rt.tracking.session_create(session))
+                        session_view = next(
+                            (item for item in rt.tracking.sessions_for(scope) if item["session_id"] == session.session_id),
+                            None,
+                        )
+                        if session_view is not None:
+                            await rt.publish("session", session_view)
                     logger.info("tracker connected %s", session.session_id)
                     await websocket.send_json({
                         "type": "connected",
@@ -659,7 +704,14 @@ async def tracker(websocket: WebSocket):
                         calibration.longitude,
                         calibration.calibration_id,
                     )
-                    rt.store.add_session(rt.tracking.session_create(session))
+                    _, duplicate = rt.store.add_session(rt.tracking.session_create(session))
+                    if not duplicate:
+                        session_view = next(
+                            (item for item in rt.tracking.sessions_for(scope) if item["session_id"] == session.session_id),
+                            None,
+                        )
+                        if session_view is not None:
+                            await rt.publish("session", session_view)
                     position_response = await materialize_calibrated_position(rt, session, scope)
                     connected_session = session.session_id
                     connected_scope = scope

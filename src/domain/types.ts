@@ -112,6 +112,23 @@ export interface StateCounts {
   [key: string]: number
 }
 
+export type SessionStatus = 'active' | 'degraded' | 'ended' | 'expired' | 'silent' | 'unknown'
+
+/** Anonymous session lifecycle data used for connection notices only. */
+export interface TrackerSessionView {
+  sessionId: string
+  runId: string
+  deploymentId: string
+  buildingId: string
+  floorId: string
+  mode: NormalizedMode
+  startedAt: string
+  lastUpdate: string
+  endedAt: string | null
+  status: SessionStatus
+  observationCount: number
+}
+
 export interface NormalizedState {
   stateRevision: number
   generatedAt: string
@@ -121,6 +138,7 @@ export interface NormalizedState {
   runId: string
   mode: NormalizedMode
   counts: StateCounts
+  sessions: TrackerSessionView[]
   positions: PositionEstimate[]
   nodes: NodeHeartbeat[]
   zones: ZoneMetric[]

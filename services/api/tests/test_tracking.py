@@ -88,6 +88,13 @@ def scope_params() -> dict[str, str]:
     }
 
 
+def test_tracker_qr_endpoint_returns_png(tracking_client) -> None:
+    response = tracking_client.get("/api/v1/tracker/qr", params={"url": "https://tracker.example.test/tracker/"})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/png")
+    assert response.content.startswith(b"\x89PNG")
+
+
 def test_dev_position_reaches_state_and_dashboard_websocket(tracking_client) -> None:
     live_url = "/api/v1/live?" + "&".join(f"{key}={value}" for key, value in scope_params().items())
     with tracking_client.websocket_connect(live_url) as websocket:
@@ -211,3 +218,27 @@ def test_state_since_revision_returns_partial_when_current_revision_is_known(tra
     assert response.status_code == 200
     assert response.json()["data"]["is_partial"] is True
     assert response.json()["since_revision"] == 0
+
+
+def test_session_end_revokes_tracker_overlay_and_rejects_further_updates(tracking_client) -> None:
+    created = tracking_client.post(
+        "/api/v1/dev/position",
+        json={"session_id": "session-stop1", "x_m": 20, "y_m": 15, "accuracy_radius_m": 2},
+    )
+    assert created.status_code == 200
+    assert tracking_client.get("/api/v1/state", params=scope_params()).json()["data"]["positions"]
+
+    ended = tracking_client.post(
+        "/api/v1/sessions/session-stop1/end",
+        json={"ended_at": "2026-09-19T18:20:00Z"},
+    )
+    assert ended.status_code == 200
+    assert ended.json()["data"]["ended_at"].startswith("2026-09-19T18:20:00")
+
+    state = tracking_client.get("/api/v1/state", params=scope_params())
+    assert state.status_code == 200
+    assert all(item["session_id"] != "session-stop1" for item in state.json()["data"]["positions"])
+    assert tracking_client.post(
+        "/api/v1/dev/position",
+        json={"session_id": "session-stop1", "x_m": 21, "y_m": 16, "accuracy_radius_m": 2},
+    ).status_code == 409

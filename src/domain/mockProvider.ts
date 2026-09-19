@@ -1,4 +1,4 @@
-import type { NodeHeartbeat, NormalizedState, PositionEstimate, PositionProvider, ProviderSnapshot, SpatialEvent } from './types'
+import type { NodeHeartbeat, NormalizedState, PositionEstimate, PositionProvider, ProviderSnapshot, SpatialEvent, TrackerSessionView } from './types'
 import { demoFloor } from './floorDefinition'
 import { roomDimensions, type RoomModelConfig, defaultRoomConfig } from './roomModel'
 import { routeForConfig, sessionZones, simulationRoutes, zoneNames, type SimulationScenario } from './simulation'
@@ -117,10 +117,15 @@ export class MockPositionProvider implements PositionProvider {
         lastObservationAt: generatedAt, captureOk: !degraded, errorCodes: degraded ? ['WEAK_SIGNAL'] : [],
       }
     })
+    const sessions: TrackerSessionView[] = positions.map((position) => ({
+      sessionId: position.sessionId, runId: position.runId, deploymentId: position.deploymentId, buildingId: position.buildingId,
+      floorId: position.floorId, mode: position.mode, startedAt: position.calculatedAt, lastUpdate: position.calculatedAt,
+      endedAt: null, status: 'active', observationCount: position.observationCount,
+    }))
     return {
       stateRevision: this.revision, generatedAt, deploymentId: 'demo-deployment', buildingId: demoFloor.buildingId, floorId: demoFloor.floorId, runId: 'demo-run-2026-09-19', mode: 'SIMULATION',
       counts: { activeSessions: positions.length, anchorsOnline: nodes.filter((node) => node.status === 'online').length, anchorsDegraded: nodes.filter((node) => node.status === 'degraded').length, eventsLastHour: this.events.length },
-      positions, nodes, zones: Object.entries(zoneNames).map(([zoneId]) => ({ zoneId, occupancy: positions.filter((position) => position.zoneId === zoneId).length, dwellSeconds: Math.round(this.tick * 0.7), status: 'active' })), recentEvents: this.events.slice(0, 8), isPartial: false,
+      sessions, positions, nodes, zones: Object.entries(zoneNames).map(([zoneId]) => ({ zoneId, occupancy: positions.filter((position) => position.zoneId === zoneId).length, dwellSeconds: Math.round(this.tick * 0.7), status: 'active' })), recentEvents: this.events.slice(0, 8), isPartial: false,
     }
   }
 }

@@ -1,4 +1,4 @@
-import { adaptEvent, adaptMode, adaptNode, adaptPosition, adaptState, unwrapData } from './adapters'
+import { adaptEvent, adaptMode, adaptNode, adaptPosition, adaptSession, adaptState, unwrapData } from './adapters'
 import type { NormalizedMode, NormalizedState, PositionProvider, ProviderSnapshot } from './types'
 
 const apiBase = (import.meta.env.VITE_SEURANTA_API_URL as string | undefined)?.replace(/\/$/, '') ?? ''
@@ -16,7 +16,7 @@ type WireMessage = { type?: unknown; state_revision?: unknown; data?: unknown }
 type WireRecord = Record<string, unknown>
 
 const defaultScope: LiveScope = { runId: 'vt-acb-floor1', deploymentId: 'vt-acb-pilot', buildingId: 'vt-academic-classroom-building', floorId: 'floor-1', mode: 'LIVE' }
-const initialState = (scope: LiveScope): NormalizedState => adaptState({ data: { state_revision: 0, generated_at: new Date().toISOString(), run_id: scope.runId, deployment_id: scope.deploymentId, building_id: scope.buildingId, floor_id: scope.floorId, positions: [], nodes: [], recent_events: [], zone_metrics: [], counts: {}, is_partial: true, mode: scope.mode ?? 'LIVE' } })
+const initialState = (scope: LiveScope): NormalizedState => adaptState({ data: { state_revision: 0, generated_at: new Date().toISOString(), run_id: scope.runId, deployment_id: scope.deploymentId, building_id: scope.buildingId, floor_id: scope.floorId, sessions: [], positions: [], nodes: [], recent_events: [], zone_metrics: [], counts: {}, is_partial: true, mode: scope.mode ?? 'LIVE' } })
 const isRecord = (value: unknown): value is WireRecord => Boolean(value && typeof value === 'object' && !Array.isArray(value))
 const isStatePayload = (value: unknown): value is WireRecord => isRecord(value) && (typeof value.state_revision === 'number' || Array.isArray(value.positions) || Array.isArray(value.nodes) || Array.isArray(value.recent_events))
 const revisionOf = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.round(value)) : undefined
@@ -195,6 +195,15 @@ export class LivePositionProvider implements PositionProvider {
       const eventValue = adaptEvent(data)
       if (!this.inScope(eventValue.runId, eventValue.deploymentId, eventValue.buildingId, eventValue.floorId)) return
       this.state = { ...this.state, stateRevision: revision, generatedAt: eventValue.emittedAt, recentEvents: [eventValue, ...this.state.recentEvents.filter((item) => item.eventId !== eventValue.eventId)].slice(0, 25) }
+      this.emit('live')
+      return
+    }
+    if (type === 'session' || type === 'session_ended') {
+      if (revision === undefined || revision < this.state.stateRevision || !this.hasMatchingWireScope(data) || typeof data.session_id !== 'string' || !data.session_id) return
+      const session = adaptSession({ ...data, status: type === 'session_ended' ? 'ended' : data.status })
+      if (!this.inScope(session.runId, session.deploymentId, session.buildingId, session.floorId)) return
+      const sessions = this.replaceBy(this.state.sessions, session.sessionId, session, (item) => item.sessionId)
+      this.state = { ...this.state, stateRevision: revision, generatedAt: session.lastUpdate, sessions }
       this.emit('live')
       return
     }

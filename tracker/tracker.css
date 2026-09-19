@@ -37,8 +37,16 @@ h2 { font-size: 18px; }
 .status-pill-live span { background: #2f9b57; }
 .status-pill-connected { border-color: #c6d8ed; color: #326a9e; background: #f4f8fd; }
 .status-pill-connected span { background: #438bcc; }
+.status-pill-connecting, .status-pill-requesting { border-color: #c6d8ed; color: #326a9e; background: #f4f8fd; }
+.status-pill-connecting span, .status-pill-requesting span { background: #438bcc; }
 .status-pill-reconnecting, .status-pill-location-unavailable { border-color: #ead9ad; color: #906a1e; background: #fffaf0; }
 .status-pill-reconnecting span, .status-pill-location-unavailable span { background: #c89423; }
+.status-pill-insecure-context { border-color: #ead9ad; color: #906a1e; background: #fffaf0; }
+.status-pill-insecure-context span { background: #c89423; }
+.status-pill-stopping { border-color: #c6d8ed; color: #326a9e; background: #f4f8fd; }
+.status-pill-stopping span { background: #438bcc; }
+.status-pill-stop-failed { border-color: #e6c0c0; color: #a43a3a; background: #fff6f6; }
+.status-pill-stop-failed span { background: #c64949; }
 .status-pill-permission-denied { border-color: #e6c0c0; color: #a43a3a; background: #fff6f6; }
 .status-pill-permission-denied span { background: #c64949; }
 .telemetry-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 25px 0 16px; }

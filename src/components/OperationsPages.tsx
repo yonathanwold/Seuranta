@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Download, FileText, MapPin, Monitor, Plus, Search
 import type { RoomModelConfig } from '../domain/roomModel'
 import type { NormalizedState, SpatialEvent } from '../domain/types'
 import { buildWorkspace, type WorkspaceDevice, type WorkspaceEvent, type WorkspaceModel } from '../domain/workspace'
+import { positionDetailFields } from '../domain/positionDetails'
 
 export type OperationsPage = 'devices' | 'events' | 'reports'
 interface OperationsPagesProps {
@@ -61,7 +62,7 @@ function DevicesPage({ workspace, onSelectOnMap }: { workspace: WorkspaceModel; 
       {filtered.map((device) => <button key={device.sessionId} aria-pressed={selected?.sessionId === device.sessionId} className={`ops-table-row device-grid ${selected?.sessionId === device.sessionId ? 'is-selected' : ''}`} onClick={() => setSelectedId(device.sessionId)}><span className="cell-id">{device.id}</span><span><StatusPill status={device.status} /></span><span>{Math.round(device.confidence * 100)}%</span><span>{device.lastSeen}</span><span title={device.spaceName}>{device.spaceName}</span></button>)}
     </div>{!filtered.length && <p className="ops-empty">No devices match these filters.</p>}<div className="ops-table-footer">Showing {filtered.length} of {workspace.devices.length} devices · complete snapshot</div></section>
     {selected && <aside className="ops-inspector"><div className="inspector-header"><div><h2>Device {selected.id}</h2><p>{selected.sessionId}</p></div><StatusPill status={selected.status} /></div><dl className="inspector-list">
-      <div><dt>Position (X, Y)</dt><dd>{selected.xM.toFixed(2)} m, {selected.yM.toFixed(2)} m</dd></div><div><dt>Confidence</dt><dd>{Math.round(selected.confidence * 100)}%</dd></div><div><dt>Uncertainty radius</dt><dd>{selected.accuracyRadiusM.toFixed(2)} m</dd></div><div><dt>Room</dt><dd>{selected.spaceName}</dd></div><div><dt>Last position</dt><dd>{selected.lastSeen}</dd></div><div><dt>Method</dt><dd>{selected.position.positionMethod}</dd></div><div><dt>Observations</dt><dd>{selected.position.observationCount}</dd></div>
+      {positionDetailFields(selected.position, new Date().toISOString(), selected.status, selected.spaceName).map((field) => <div key={field.key}><dt>{field.label}</dt><dd title={field.value}>{field.value}</dd></div>)}
     </dl><div className="inspector-section"><h3>How to read health</h3><p className="muted-copy">Offline means the position is at least 30 seconds older than the snapshot. Degraded means it is 10–30 seconds old, below 72% confidence, or outside the map. It is not a hardware heartbeat.</p></div><div className="inspector-actions"><button className="button-quiet" onClick={() => onSelectOnMap(selected.sessionId)}><MapPin size={15} /> Locate in map</button></div></aside>}</div>
     {notice && <div className="ops-toast" role="status">{notice}</div>}
   </section>

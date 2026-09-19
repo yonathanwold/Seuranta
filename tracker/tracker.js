@@ -18,6 +18,7 @@
     devStep: 0,
     latestPosition: null,
     updates: 0,
+    serverSessionEstablished: false,
   }
 
   const $ = (id) => document.getElementById(id)
@@ -34,7 +35,10 @@
   function getSessionId() {
     const existing = window.localStorage.getItem(storageKey)
     if (existing && /^session-[a-z0-9-]{4,64}$/.test(existing)) return existing
-    const generated = `session-${crypto.randomUUID()}`.toLowerCase()
+    const random = typeof crypto?.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
+    const generated = `session-${random}`.toLowerCase()
     window.localStorage.setItem(storageKey, generated)
     return generated
   }
@@ -88,10 +92,31 @@
     return body.data || body
   }
 
+  async function endBackendSession() {
+    const response = await fetch(`${state.apiBase}/api/v1/sessions/${encodeURIComponent(state.sessionId)}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ended_at: new Date().toISOString() }),
+    })
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(body?.error?.message || `Stop request returned ${response.status}`)
+    state.serverSessionEstablished = false
+  }
+
   function connectSocket() {
     if (!state.active || state.socket) return
     setStatus('connecting', 'Connecting to the Seuranta live telemetry channel…')
-    const socket = new WebSocket(wsUrl())
+    let socket
+    try {
+      socket = new WebSocket(wsUrl())
+    } catch (error) {
+      setStatus('reconnecting', error?.message || 'The live telemetry channel could not start. Retrying…')
+      const wait = state.reconnectMs
+      state.reconnectMs = Math.min(15000, state.reconnectMs * 2)
+      window.clearTimeout(state.reconnectTimer)
+      state.reconnectTimer = window.setTimeout(connectSocket, wait)
+      return
+    }
     state.socket = socket
     socket.onopen = () => {
       if (state.socket !== socket) return
@@ -102,10 +127,14 @@
     socket.onmessage = (event) => {
       let message
       try { message = JSON.parse(event.data) } catch { return }
-      if (message.type === 'ack') {
+      if (message.type === 'connected') {
+        state.serverSessionEstablished = true
+      } else if (message.type === 'ack') {
+        state.serverSessionEstablished = true
         if (message.status === 'calibration_required') setMessage('Stand at the configured known point, then press Calibrate Position.')
         else if (message.status === 'live') setStatus('live', 'Live position is being shared with Seuranta.')
       } else if (message.type === 'calibrated') {
+        state.serverSessionEstablished = true
         setStatus(message.position ? 'live' : 'connected', message.position ? 'Calibration saved. Live position is being shared with Seuranta.' : 'Calibration saved. The next location update will appear on the map.')
         calibrateButton.disabled = !state.latestPosition
       } else if (message.type === 'error') {
@@ -146,6 +175,7 @@
     if (sendSocket(payload)) return
     try {
       const result = await sendRest('/api/v1/telemetry/location', payload)
+      state.serverSessionEstablished = true
       if (result.status === 'live') setStatus('live', 'Live position is being shared with Seuranta.')
       else if (result.status === 'calibration_required') setMessage('Location received. Calibrate at the known point to place this device on the floor map.')
     } catch (error) {
@@ -180,22 +210,42 @@
   }
 
   function startSharing() {
-    if (!('geolocation' in navigator)) {
-      setStatus('location-unavailable', 'This browser does not support geolocation.')
-      return
-    }
-    state.active = true
     sessionCard.hidden = false
     enableButton.disabled = true
     stopButton.disabled = false
     $('session-short').textContent = shortSessionId()
     permissionNote.textContent = 'The browser location permission request was started by your button press.'
-    setStatus('connecting', 'Connecting and requesting browser location permission…')
+    setStatus('requesting', 'Requesting precise location permission…')
+    if (!('geolocation' in navigator)) {
+      state.active = false
+      enableButton.disabled = false
+      stopButton.disabled = true
+      setStatus('location-unavailable', 'This browser does not support geolocation.')
+      return
+    }
+    const isLocalDevelopment = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname.toLowerCase())
+    const isSecure = window.isSecureContext || window.location.protocol === 'https:' || isLocalDevelopment
+    if (!isSecure) {
+      state.active = false
+      enableButton.disabled = false
+      stopButton.disabled = true
+      setStatus('insecure-context', 'Precise location requires an HTTPS tracker URL on a phone. Ask the operator for the configured secure link.')
+      return
+    }
+    state.active = true
     connectSocket()
-    state.watchId = navigator.geolocation.watchPosition(onPosition, onLocationError, locationOptions)
+    try {
+      state.watchId = navigator.geolocation.watchPosition(onPosition, onLocationError, locationOptions)
+    } catch (error) {
+      state.active = false
+      enableButton.disabled = false
+      stopButton.disabled = true
+      setStatus('location-unavailable', error?.message || 'The browser could not start location sharing.')
+    }
   }
 
   function stopSharing(showMessage = true) {
+    const revokeRequired = state.serverSessionEstablished
     state.active = false
     if (state.watchId !== null) navigator.geolocation.clearWatch(state.watchId)
     state.watchId = null
@@ -214,7 +264,19 @@
     enableButton.disabled = false
     stopButton.disabled = true
     calibrateButton.disabled = true
-    setStatus('stopped', showMessage ? 'Sharing stopped. No more browser locations will be sent.' : 'Location permission is required before sharing can start.')
+    if (revokeRequired) {
+      setStatus('stopping', 'Stopping browser delivery and revoking this session on the Seuranta backend…')
+      void endBackendSession().then(() => {
+        setStatus('stopped', showMessage ? 'Sharing stopped and the backend session was revoked.' : 'Location permission was denied; the backend session was revoked.')
+      }).catch((error) => {
+        enableButton.disabled = true
+        stopButton.disabled = false
+        setStatus('stop-failed', 'Sharing is stopped on this device, but backend revocation could not be confirmed. Keep this page open and try Stop Sharing again.')
+        setMessage(error.message || 'The backend did not confirm session revocation.')
+      })
+    } else {
+      setStatus('stopped', showMessage ? 'Sharing stopped. No backend session was established.' : 'Location permission is required before sharing can start.')
+    }
   }
 
   async function calibrate() {
@@ -232,6 +294,7 @@
     if (sendSocket(payload)) return
     try {
       await sendRest('/api/v1/tracker/calibrate', payload)
+      state.serverSessionEstablished = true
       setMessage('Calibration saved. Keep sharing and the next update will be placed on the floor map.')
     } catch (error) {
       setMessage(error.message || 'Calibration could not be saved.')
@@ -263,6 +326,7 @@
         $('accuracy-value').textContent = '2.0 m'
         $('position-value').textContent = `${x.toFixed(2)} m, ${y.toFixed(2)} m`
         $('last-update-value').textContent = new Date().toLocaleTimeString()
+        state.serverSessionEstablished = true
         if (result?.position) setMessage('DEV SIMULATION — backend floor position received.')
       } catch (error) {
         setStatus('reconnecting', error.message || 'Development endpoint unavailable.')
@@ -275,13 +339,14 @@
   async function loadConfig() {
     try {
       const response = await fetch(`${state.apiBase}/api/v1/tracker/config`)
-      if (!response.ok) return
+      if (!response.ok) throw new Error(`Backend configuration returned ${response.status}.`)
       const body = await response.json()
       state.config = body.data || body
       $('deployment-label').textContent = `${state.config.deployment_id || 'Seuranta'} · ${state.config.floor_id || 'floor-1'}`
       if (state.config.dev_mode) devCard.hidden = false
-    } catch {
+    } catch (error) {
       $('deployment-label').textContent = 'Backend configuration unavailable'
+      setMessage(error?.message || 'Backend configuration unavailable. Check the secure tracker link and try again.')
     }
   }
 

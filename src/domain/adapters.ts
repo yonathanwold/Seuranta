@@ -3,6 +3,7 @@ import type {
   NormalizedMode,
   NormalizedState,
   PositionEstimate,
+  TrackerSessionView,
   SpatialEvent,
   EntityStatus,
   StateCounts,
@@ -69,6 +70,21 @@ export function adaptNode(input: unknown): NodeHeartbeat {
   }
 }
 
+export function adaptSession(input: unknown): TrackerSessionView {
+  const source = asRecord(input)
+  const endedAt = typeof source.ended_at === 'string' ? source.ended_at : null
+  const rawStatus = text(source.status, endedAt ? 'ended' : 'active').trim().toLowerCase()
+  const status: TrackerSessionView['status'] = ['active', 'degraded', 'ended', 'expired', 'silent'].includes(rawStatus)
+    ? rawStatus as TrackerSessionView['status']
+    : 'unknown'
+  return {
+    sessionId: text(source.session_id), runId: text(source.run_id), deploymentId: text(source.deployment_id),
+    buildingId: text(source.building_id), floorId: text(source.floor_id), mode: adaptMode(source.mode),
+    startedAt: timestamp(source.started_at), lastUpdate: timestamp(source.last_update ?? source.started_at), endedAt,
+    status, observationCount: Math.max(0, Math.round(number(source.observation_count))),
+  }
+}
+
 export function adaptEvent(input: unknown): SpatialEvent {
   const source = asRecord(input)
   const metadata = asRecord(source.metadata ?? source.attributes)
@@ -94,6 +110,7 @@ export function unwrapData(input: unknown): unknown {
 export function adaptState(input: unknown, fallback: Partial<NormalizedState> = {}): NormalizedState {
   const source = asRecord(unwrapData(input))
   const positions = Array.isArray(source.positions) ? source.positions.map(adaptPosition) : []
+  const sessions = Array.isArray(source.sessions) ? source.sessions.map(adaptSession) : []
   const nodes = Array.isArray(source.nodes) ? source.nodes.map(adaptNode) : []
   const recentEvents = Array.isArray(source.recent_events) ? source.recent_events.map(adaptEvent) : []
   const rawCounts = asRecord(source.counts)
@@ -107,7 +124,7 @@ export function adaptState(input: unknown, fallback: Partial<NormalizedState> = 
     stateRevision: Math.round(number(source.state_revision, fallback.stateRevision ?? 0)), generatedAt: timestamp(source.generated_at),
     deploymentId: text(source.deployment_id, fallback.deploymentId ?? ''), buildingId: text(source.building_id, fallback.buildingId ?? ''), floorId: text(source.floor_id, fallback.floorId ?? ''),
     runId: text(source.run_id, fallback.runId ?? ''), mode: adaptMode(source.mode ?? fallback.mode), counts,
-    positions, nodes, zones: Array.isArray(source.zone_metrics) ? source.zone_metrics.map((zone) => {
+    sessions, positions, nodes, zones: Array.isArray(source.zone_metrics) ? source.zone_metrics.map((zone) => {
       const item = asRecord(zone); return { zoneId: text(item.zone_id), occupancy: Math.max(0, number(item.occupancy)), dwellSeconds: Math.max(0, number(item.dwell_seconds)), status: (text(item.status, 'clear') as 'clear' | 'active' | 'attention') }
     }) : [], recentEvents, isPartial: bool(source.is_partial, fallback.isPartial ?? false),
   }

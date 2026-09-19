@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { PHOTO_ROOM_ASSET, roomAssetScaleXY, roomDimensions, type RoomModelConfig } from '../domain/roomModel'
 import { mapToRoomAsset, roomAssetToMap } from '../domain/coordinates'
 import { moveWithinFloor, walkthroughStart } from '../domain/walkthrough'
+import { entityMarkerStyle, positionSourceLabel } from '../domain/marker'
 import type { NodeHeartbeat, NormalizedState, PositionEstimate } from '../domain/types'
 
 interface MapCanvasProps {
@@ -90,12 +91,16 @@ function EntityMarker({ position, selected, showConfidence, showLabels, onSelect
       <circleGeometry args={[radius, 48]} />
       <meshBasicMaterial color="#151515" transparent opacity={selected ? 0.12 : 0.05} depthWrite={false} />
     </mesh>}
+    {selected && <mesh renderOrder={11}>
+      <torusGeometry args={[0.68, entityMarkerStyle.selectedOutlineWidth, 12, 40]} />
+      <meshBasicMaterial color={entityMarkerStyle.selectedOutline} depthTest={false} depthWrite={false} />
+    </mesh>}
     <mesh renderOrder={10}>
       <sphereGeometry args={[selected ? 0.65 : 0.5, 16, 12]} />
-      <meshBasicMaterial color={selected ? "#9b6200" : "#151515"} depthTest={false} depthWrite={false} transparent />
+      <meshBasicMaterial color={entityMarkerStyle.color} depthTest={false} depthWrite={false} />
     </mesh>
     {(showLabels && (hovered || selected)) && <Html position={[0, 0.65, 0]} center zIndexRange={[1, 5]}>
-      <div className={`scene-label ${selected ? 'is-selected' : ''}`}><span className="scene-label-dot" /><span><strong>Device {displaySession(position.sessionId)}</strong><small>{Math.round(position.confidence * 100)}% confidence · {position.accuracyRadiusM.toFixed(1)} m radius</small></span></div>
+      <div className={`scene-label ${selected ? 'is-selected' : ''}`}><span className="scene-label-dot" /><span><strong>Device {displaySession(position.sessionId)}</strong><small>{positionSourceLabel(position)} · {Math.round(position.confidence * 100)}% confidence · {position.accuracyRadiusM.toFixed(1)} m radius</small></span></div>
     </Html>}
   </group>
 }

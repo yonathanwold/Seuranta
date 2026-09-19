@@ -204,6 +204,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 html { overflow: hidden; }
 .status-callout { text-transform: capitalize; }
 .app-shell { position: fixed; inset: 0; height: 100dvh; }
+
+.connection-toast { position: fixed; right: 24px; bottom: 24px; z-index: 50; display: flex; align-items: center; gap: 10px; max-width: min(420px, calc(100vw - 32px)); padding: 11px 12px 11px 14px; color: #fff; background: #111113; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; box-shadow: 0 14px 32px rgba(0,0,0,.24); font-size: 12px; line-height: 1.35; }
+.connection-toast-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #2fca7a; box-shadow: 0 0 0 3px rgba(47,202,122,.18); }
+.connection-toast .icon-button { margin-left: 4px; color: rgba(255,255,255,.72); }
 .floor-plan-fallback, .floor-plan-heading, .floor-plan-room span, .floor-plan-note { transform: none; }
 .floor-plan-heading { top: -36px; flex-wrap: wrap; gap: 4px 10px; }
 .floor-plan-heading span, .floor-plan-note { color: #666; }

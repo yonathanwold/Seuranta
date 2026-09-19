@@ -46,6 +46,7 @@ class TrackerSession:
     scope: TrackingScope
     started_at: datetime
     last_received_at: datetime
+    ended_at: datetime | None = None
     last_captured_at: datetime | None = None
     latest_location: TrackerLocation | None = None
     latest_position: PositionEstimate | None = None
@@ -126,6 +127,8 @@ class TrackingEngine:
             if current:
                 if current.scope != scope:
                     raise ValueError("session_id is already associated with another scope")
+                if current.ended_at is not None:
+                    raise ValueError("session has ended; start a new anonymous session")
                 return current, False
             current = TrackerSession(
                 session_id=session_id,
@@ -149,6 +152,27 @@ class TrackingEngine:
             mode=Mode.REAL,
             started_at=session.started_at,
         )
+
+    def end_session(
+        self,
+        session_id: str,
+        scope: TrackingScope | None = None,
+        now: datetime | None = None,
+    ) -> TrackerSession | None:
+        """Revoke an active tracker session immediately.
+
+        The existing sessions API owns durable session history.  This in-memory
+        marker makes the live tracker overlay stop publishing the session at
+        once instead of waiting for the stale/expiry timer.
+        """
+
+        normalized = self.validate_session_id(session_id)
+        with self._lock:
+            current = self._sessions.get(normalized)
+            if current is None or (scope is not None and current.scope != scope):
+                return None
+            current.ended_at = now or utc_now()
+            return current
 
     def calibrate(
         self,
@@ -267,6 +291,8 @@ class TrackingEngine:
             return IngestResult(current, position, created)
 
     def _status(self, session: TrackerSession, now: datetime) -> str:
+        if session.ended_at is not None:
+            return "ended"
         age = max(0.0, (now - session.last_received_at).total_seconds())
         if age < self.settings.tracker_stale_after_seconds:
             return "active"
@@ -279,7 +305,7 @@ class TrackingEngine:
         with self._lock:
             result = []
             for session in self._sessions.values():
-                if session.scope == scope and session.latest_position and self._status(session, current_time) != "expired":
+                if session.scope == scope and session.latest_position and self._status(session, current_time) not in {"expired", "ended"}:
                     result.append(session.latest_position)
             return sorted(result, key=lambda item: item.calculated_at, reverse=True)
 
@@ -299,6 +325,7 @@ class TrackingEngine:
                     "mode": Mode.REAL.value,
                     "started_at": session.started_at.isoformat(),
                     "last_update": session.last_received_at.isoformat(),
+                    "ended_at": session.ended_at.isoformat() if session.ended_at else None,
                     "status": self._status(session, current_time),
                     "observation_count": session.observation_count,
                 })
