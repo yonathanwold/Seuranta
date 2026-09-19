@@ -18,7 +18,7 @@ npm.cmd test
 npm.cmd run build
 ```
 
-The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` and record that value here if this handoff is updated. The latest pre-handoff SHA before this final handoff revision is `4b1365d` (`fix(app): keep R3F scene as single map layer`).
+The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` to obtain the exact final value. This handoff revision cannot safely contain its own SHA; the latest pre-handoff SHA before this handoff revision is `12e5fa4d4327a8d5b6bdfe8a6d3b2d16223d998c` (`fix(app): harden live deltas and operational controls`).
 
 ## Inspect before editing
 
@@ -37,8 +37,8 @@ These histories are unrelated. Backend changes are out of scope for this fronten
 - `src/domain/coordinates.ts`: one world unit per metre, backend x → world x, backend y → world -z, centred `(16, 11)` origin.
 - `src/domain/floorDefinition.ts`: 32 m × 22 m Riverside Office Floor 2, 0.25 m slab, 0.65 m walls, room/zone polygons, and four anchor coordinates.
 - `src/domain/mockProvider.ts`: five anonymous sessions on believable routes, confidence/accuracy, events, zone occupancy, and mixed anchor status.
-- `src/domain/liveProvider.ts`: `GET /api/v1/state` plus `/api/v1/live` WebSocket with bounded reconnect and last-state preservation.
-- `src/components/MapCanvas.tsx`: R3F floor geometry, OrbitControls, Overview/Top/Focus cameras, entity interpolation, anchors, confidence disc, and labels.
+- `src/domain/liveProvider.ts`: scoped `GET /api/v1/state` plus `/api/v1/live` WebSocket with typed position/node/event reduction, bounded reconnect, snapshot-required rehydration, revision preservation, and last-state preservation.
+- `src/components/MapCanvas.tsx`: R3F floor geometry, OrbitControls, explicit Overview/Top/Focus camera requests, entity interpolation, anchors, confidence disc, labels, and Canvas WebGL fallback message.
 - `src/App.tsx` and `src/styles.css`: operation shell, explorer, synchronized selection/search, detail panel, layer controls, responsive design system.
 - `src/tests/`: coordinate, adapter, and provider unit coverage.
 
@@ -47,16 +47,18 @@ These histories are unrelated. Backend changes are out of scope for this fronten
 - Polished dark-nav/light-stage operations atlas shell.
 - Real Three.js/R3F floor scene with dimensional geometry, entities, anchors, confidence, labels, and camera controls.
 - Smooth 350 ms-class camera preset transitions that stop when the operator manually orbits/pans/zooms.
-- Simulation and live provider abstraction with normalized contracts and honest empty/reconnect state.
+- Simulation and live provider abstraction with normalized contracts, scoped live URLs, typed deltas, and honest empty/reconnect state.
+- Every visible control has meaning: unsupported analytics/settings/help/replay surfaces are omitted, building/floor context is static, Map layers focuses its layer controls, and the detail panel exposes only its implemented Details tab.
 - Synchronized entity search/list/map/detail selection and operational event feed.
 - Documentation, privacy boundary, tests, lint, and production build.
 
 ## Incomplete / known limitations
 
 - The live API is scaffolded to the documented V1 REST/WebSocket boundary; no backend is bundled on this branch, so Live mode is expected to show unavailable/empty state without a running service.
-- Browser verification used the local Vite app and confirmed shell, simulation updates, selection/search, layer/camera controls, empty live state, and clean console. The in-app browser had a constrained 1280×720 viewport; use a normal desktop browser for final visual sign-off at 1920×1080 and 1366×768.
+- Browser verification used the local Vite app at the available Chrome extension viewport of 1440×756 (the browser capability did not expose an exact viewport override). It confirmed shell, simulation updates, selection/search, layer toggles, explicit focus, manual orbit persistence across telemetry ticks, empty live state, and a fresh-tab console with no app errors. Exact 1366×768 and 1920×1080 viewport sign-off remains a follow-up if a resizable browser is available.
 - The current backend does not send anchor coordinates in heartbeat payloads; floor configuration remains authoritative.
 - The production bundle emits the normal Vite warning that the Three.js chunk is larger than 500 kB; code splitting can be considered after product scope stabilizes.
+- WebGL fallback is a concise Canvas fallback message; the explorer remains the usable DOM entity/anchor list. No alternate DOM floor renderer is claimed.
 - Unsupported product surfaces such as heatmaps, AI summaries, personal profiles, and settings forms are intentionally omitted.
 
 ## Checks run
@@ -65,16 +67,17 @@ The following were run successfully during this handoff:
 
 ```text
 npm.cmd install
-npm.cmd test       # 3 files, 7 tests passed
+npm.cmd test       # 5 files, 13 tests passed
 npm.cmd run lint   # passed
 npm.cmd run build  # TypeScript + Vite production build passed; chunk-size advisory only
+npm.cmd audit      # 5 vulnerabilities (3 moderate, 1 high, 1 critical); npm recommends --force, not applied
 ```
 
-The dev server was run with `npm.cmd run dev -- --host 127.0.0.1 --port 4173`. Browser checks confirmed the simulation revision advances, five anonymous devices appear, entity search filters, list selection updates the detail panel and scene label, camera presets change state, layer toggles work, and Live mode presents an empty/unavailable state without console errors.
+The dev server was run with `npm.cmd run dev -- --host 127.0.0.1 --port 4173`. Browser checks confirmed the simulation revision advances, five anonymous devices appear, entity search filters, list selection updates the detail panel and scene label, camera presets change only on explicit requests, manual orbit remains after telemetry ticks, layer toggles work, and Live mode presents an empty/unavailable state. A fresh browser tab reported no app console errors; one stale pre-reload Vite HMR error and unrelated extension warnings were excluded from that result.
 
 ## Integration assumptions and contracts
 
-Keep the exact PositionEstimate V1 field set in `docs/frontend-architecture.md`. State is expected from `GET /api/v1/state` and live updates from `WS /api/v1/live` as initial snapshots plus `{ type, state_revision, data }` deltas. Keep DTO tolerance for wrappers, mode casing, edge/data status differences, and positioning event `attributes` versus data-platform `metadata`. Do not put raw MACs, payloads, names, or personal identifiers into the UI.
+Keep the exact PositionEstimate V1 field set in `docs/frontend-architecture.md`. State is expected from scoped `GET /api/v1/state` and live updates from scoped `WS /api/v1/live` as initial snapshots plus `{ type, state_revision, data }` deltas. REST and WS use `run_id`, `deployment_id`, `building_id`, `floor_id`, and data-platform `real`/`simulated` mode query values; reconnects use `since_revision`, and `snapshot_required` triggers a full refresh. Keep DTO tolerance for wrappers, mode casing, edge/data status differences, and positioning event `attributes` versus data-platform `metadata`. Do not put raw MACs, payloads, names, or personal identifiers into the UI.
 
 ## Priorities for the next agent
 
