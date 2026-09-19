@@ -7,7 +7,7 @@ You are taking over the Seuranta repository for a final UI, UX, and integration-
 - Repository: `https://github.com/yonathanwold/Seuranta.git`
 - Baseline branch: `main`
 - Current app branch: `team/app`
-- V2 branch to create and push: `team/app-v2`
+- V2 branch to continue and push: `team/app-v2` (it is already seeded from `main`; if it is missing, create it from the latest `main` commit)
 - Treat the latest remote `main` commit as the baseline. Run `git rev-parse --short HEAD` after checkout and use that value in your review notes; do not rely on a copied SHA in this prompt.
 - Branches already inspected: `team/edge`, `team/data-platform`, `team/positioning`, and `team/app`.
 
@@ -58,7 +58,7 @@ The logo and visual direction are intentionally restrained: white and black as t
 
 ## V2 assignment
 
-Create `team/app-v2` from the latest `main` commit. Do not force-push and do not rewrite or merge the other team branches. All agents share the checkout, so inspect `git status` first and preserve work you did not create.
+Continue on `team/app-v2`, which is seeded from the latest `main` commit. If the branch is missing in a fresh checkout, create it from `main`. Do not force-push and do not rewrite or merge the other team branches. All agents share the checkout, so inspect `git status` first and preserve work you did not create.
 
 Review the complete product as if you were the final design and engineering reviewer. Make improvements only when they make the demo clearer, more reliable, or more believable:
 
