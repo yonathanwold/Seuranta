@@ -54,6 +54,7 @@ h2 { font-size: 18px; }
 dt { color: #77777a; font-size: 11px; }
 dd { margin: 5px 0 0; overflow: hidden; font-size: 14px; font-weight: 730; text-overflow: ellipsis; white-space: nowrap; }
 .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.action-row #new-session-button { grid-column: 1 / -1; }
 .dev-card { border-color: #e3c878; background: #fffdf3; }
 .dev-card .muted { margin-bottom: 16px; }
 .dev-card .secondary-button { border-color: #b68b22; color: #705413; }

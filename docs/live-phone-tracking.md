@@ -70,7 +70,7 @@ If the dashboard is opened from a laptop hotspot/LAN address instead of localhos
 6. Grant precise location permission. The tracker displays the actual browser-reported accuracy, latitude/longitude, update count, and connection state.
 7. Stand at the configured known point and press **Calibrate Position**. Keep the page open and walk several metres. The next updates should move the same anonymous marker in the existing 3D map.
 8. Repeat on another consenting phone. Each phone has a different anonymous ID stored only in that browser's local storage.
-9. Press **Stop Sharing** on a phone to call `clearWatch`, close the tracker socket, and stop delivery. A disconnected session remains degraded briefly, then leaves active state after the expiry threshold.
+9. Press **Stop Sharing** on a phone to call `clearWatch`, close the tracker socket, and revoke that anonymous session immediately. The tracker keeps ended IDs from being reused; press **Start New Anonymous Session** before sharing again. If a browser reloads with an older ended ID, the tracker rotates it once and reconnects automatically.
 
 The default thresholds are active under 10 seconds, degraded/stale from 10 seconds up to 30 seconds, and removed from active state at 30 seconds. They can be changed with `SEURANTA_TRACKER_STALE_SECONDS` and `SEURANTA_TRACKER_EXPIRE_SECONDS`.
 

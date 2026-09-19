@@ -242,3 +242,29 @@ def test_session_end_revokes_tracker_overlay_and_rejects_further_updates(trackin
         "/api/v1/dev/position",
         json={"session_id": "session-stop1", "x_m": 21, "y_m": 16, "accuracy_radius_m": 2},
     ).status_code == 409
+
+    replacement = tracking_client.post(
+        "/api/v1/dev/position",
+        json={"session_id": "session-stop2", "x_m": 21, "y_m": 16, "accuracy_radius_m": 2},
+    )
+    assert replacement.status_code == 200
+    assert replacement.json()["data"]["session_id"] == "session-stop2"
+
+
+def test_ended_tracker_websocket_reports_machine_readable_error(tracking_client) -> None:
+    created = tracking_client.post(
+        "/api/v1/dev/position",
+        json={"session_id": "session-wsend", "x_m": 20, "y_m": 15, "accuracy_radius_m": 2},
+    )
+    assert created.status_code == 200
+    ended = tracking_client.post(
+        "/api/v1/sessions/session-wsend/end",
+        json={"ended_at": "2026-09-19T18:20:00Z"},
+    )
+    assert ended.status_code == 200
+
+    with tracking_client.websocket_connect("/api/v1/tracker") as tracker_socket:
+        tracker_socket.send_json({"type": "hello", "session_id": "session-wsend"})
+        error = tracker_socket.receive_json()
+        assert error["type"] == "error"
+        assert error["code"] == "tracker_session_ended"

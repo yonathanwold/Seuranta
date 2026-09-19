@@ -459,7 +459,8 @@ async def calibrate_tracker(payload: TrackerCalibration, rt: Runtime = Depends(r
             payload.calibration_id,
         )
     except ValueError as exc:
-        raise HTTPException(422, {"message": str(exc), "code": "calibration_error"}) from exc
+        code = "tracker_session_ended" if "session has ended" in str(exc).lower() else "calibration_error"
+        raise HTTPException(409 if code == "tracker_session_ended" else 422, {"message": str(exc), "code": code}) from exc
     _, duplicate = rt.store.add_session(rt.tracking.session_create(session))
     if not duplicate:
         session_view = next(
@@ -734,7 +735,8 @@ async def tracker(websocket: WebSocket):
                 await error("malformed_packet", "Telemetry packet failed validation.")
                 logger.info("malformed tracker packet fields=%s", len(exc.errors()))
             except ValueError as exc:
-                await error("tracker_error", str(exc))
+                code = "tracker_session_ended" if "session has ended" in str(exc).lower() else "tracker_error"
+                await error(code, str(exc))
     except WebSocketDisconnect:
         if connected_session:
             logger.info("tracker disconnected %s", connected_session)

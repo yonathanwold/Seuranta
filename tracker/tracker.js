@@ -19,6 +19,7 @@
     latestPosition: null,
     updates: 0,
     serverSessionEstablished: false,
+    sessionRecoveryAttempted: false,
   }
 
   const $ = (id) => document.getElementById(id)
@@ -29,18 +30,41 @@
   const trackerMessage = $('tracker-message')
   const calibrateButton = $('calibrate-button')
   const stopButton = $('stop-button')
+  const newSessionButton = $('new-session-button')
   const devCard = $('dev-card')
   const devButton = $('dev-button')
 
   function getSessionId() {
     const existing = window.localStorage.getItem(storageKey)
     if (existing && /^session-[a-z0-9-]{4,64}$/.test(existing)) return existing
+    return createSessionId()
+  }
+
+  function createSessionId() {
     const random = typeof crypto?.randomUUID === 'function'
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
     const generated = `session-${random}`.toLowerCase()
     window.localStorage.setItem(storageKey, generated)
     return generated
+  }
+
+  function resetTelemetry() {
+    state.latestPosition = null
+    state.updates = 0
+    $('accuracy-value').textContent = '—'
+    $('position-value').textContent = '—'
+    $('updates-value').textContent = '0'
+    $('last-update-value').textContent = '—'
+    calibrateButton.disabled = true
+  }
+
+  function rotateSession() {
+    state.sessionId = createSessionId()
+    state.serverSessionEstablished = false
+    state.sessionRecoveryAttempted = false
+    $('session-short').textContent = shortSessionId()
+    resetTelemetry()
   }
 
   function shortSessionId() {
@@ -88,8 +112,56 @@
       body: JSON.stringify(payload),
     })
     const body = await response.json().catch(() => ({}))
-    if (!response.ok) throw new Error(body?.error?.message || `Request returned ${response.status}`)
+    if (!response.ok) {
+      const error = new Error(body?.error?.message || `Request returned ${response.status}`)
+      error.code = body?.error?.code
+      error.status = response.status
+      throw error
+    }
     return body.data || body
+  }
+
+  function isEndedSessionError(error) {
+    return error?.code === 'tracker_session_ended' || /session has ended/i.test(error?.message || '')
+  }
+
+  function stopLocalDelivery() {
+    state.active = false
+    if (state.watchId !== null) navigator.geolocation.clearWatch(state.watchId)
+    state.watchId = null
+    window.clearTimeout(state.reconnectTimer)
+    state.reconnectTimer = null
+    if (state.socket) {
+      const socket = state.socket
+      state.socket = null
+      socket.close()
+    }
+    if (state.devTimer) {
+      window.clearInterval(state.devTimer)
+      state.devTimer = null
+      devButton.textContent = 'Start DEV SIMULATION'
+    }
+    enableButton.disabled = false
+    stopButton.disabled = true
+    calibrateButton.disabled = true
+  }
+
+  function recoverEndedSession() {
+    if (state.sessionRecoveryAttempted) {
+      stopLocalDelivery()
+      newSessionButton.hidden = false
+      setStatus('stop-failed', 'This anonymous session ended. Start a new anonymous session to continue sharing.')
+      return
+    }
+    state.sessionRecoveryAttempted = true
+    const oldSocket = state.socket
+    state.socket = null
+    oldSocket?.close()
+    rotateSession()
+    state.sessionRecoveryAttempted = true
+    newSessionButton.hidden = true
+    setStatus('reconnecting', 'The previous anonymous session ended. Starting a new anonymous session…')
+    if (state.active) connectSocket()
   }
 
   async function endBackendSession() {
@@ -129,6 +201,7 @@
       try { message = JSON.parse(event.data) } catch { return }
       if (message.type === 'connected') {
         state.serverSessionEstablished = true
+        state.sessionRecoveryAttempted = false
       } else if (message.type === 'ack') {
         state.serverSessionEstablished = true
         if (message.status === 'calibration_required') setMessage('Stand at the configured known point, then press Calibrate Position.')
@@ -138,7 +211,8 @@
         setStatus(message.position ? 'live' : 'connected', message.position ? 'Calibration saved. Live position is being shared with Seuranta.' : 'Calibration saved. The next location update will appear on the map.')
         calibrateButton.disabled = !state.latestPosition
       } else if (message.type === 'error') {
-        setMessage(message.message || 'The telemetry channel rejected that packet.')
+        if (message.code === 'tracker_session_ended' || /session has ended/i.test(message.message || '')) recoverEndedSession()
+        else setMessage(message.message || 'The telemetry channel rejected that packet.')
       }
     }
     socket.onerror = () => socket.close()
@@ -179,6 +253,10 @@
       if (result.status === 'live') setStatus('live', 'Live position is being shared with Seuranta.')
       else if (result.status === 'calibration_required') setMessage('Location received. Calibrate at the known point to place this device on the floor map.')
     } catch (error) {
+      if (isEndedSessionError(error)) {
+        recoverEndedSession()
+        return
+      }
       setStatus('reconnecting', error.message || 'Backend unavailable. Retrying…')
     }
   }
@@ -233,6 +311,8 @@
       return
     }
     state.active = true
+    newSessionButton.hidden = true
+    state.sessionRecoveryAttempted = false
     connectSocket()
     try {
       state.watchId = navigator.geolocation.watchPosition(onPosition, onLocationError, locationOptions)
@@ -268,6 +348,9 @@
       setStatus('stopping', 'Stopping browser delivery and revoking this session on the Seuranta backend…')
       void endBackendSession().then(() => {
         setStatus('stopped', showMessage ? 'Sharing stopped and the backend session was revoked.' : 'Location permission was denied; the backend session was revoked.')
+        enableButton.disabled = true
+        newSessionButton.hidden = false
+        setMessage('Session ended. Start a new anonymous session before sharing again.')
       }).catch((error) => {
         enableButton.disabled = true
         stopButton.disabled = false
@@ -297,6 +380,10 @@
       state.serverSessionEstablished = true
       setMessage('Calibration saved. Keep sharing and the next update will be placed on the floor map.')
     } catch (error) {
+      if (isEndedSessionError(error)) {
+        recoverEndedSession()
+        return
+      }
       setMessage(error.message || 'Calibration could not be saved.')
     }
   }
@@ -329,6 +416,10 @@
         state.serverSessionEstablished = true
         if (result?.position) setMessage('DEV SIMULATION — backend floor position received.')
       } catch (error) {
+        if (isEndedSessionError(error)) {
+          recoverEndedSession()
+          return
+        }
         setStatus('reconnecting', error.message || 'Development endpoint unavailable.')
       }
     }
@@ -350,8 +441,18 @@
     }
   }
 
+  function startNewSession() {
+    if (state.active) return
+    rotateSession()
+    newSessionButton.hidden = true
+    enableButton.disabled = false
+    setStatus('stopped', 'A new anonymous session is ready.')
+    setMessage('Press Enable Precise Location to begin sharing.')
+  }
+
   enableButton.addEventListener('click', startSharing)
   stopButton.addEventListener('click', () => stopSharing(true))
+  newSessionButton.addEventListener('click', startNewSession)
   calibrateButton.addEventListener('click', () => { void calibrate() })
   devButton.addEventListener('click', toggleDevSimulation)
   $('session-short').textContent = shortSessionId()
