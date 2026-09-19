@@ -121,7 +121,7 @@ class EdgeAgent:
         self._sent_total = 0
         self._last_observation_at: Optional[str] = None
         self._last_capture_ok = True
-        self._configured_session_published = False
+        self._configured_session_published: set[str] = set()
 
     def start_session(self, raw_identifier: str, *, now: Optional[str] = None) -> Session:
         session = self.registry.start(raw_identifier, now=now)
@@ -195,19 +195,20 @@ class EdgeAgent:
             self._queue_batch(ready)
 
     def _ensure_configured_ble_session(self) -> None:
-        """Activate the consented BLE target before its first sample arrives."""
-        if self.config.capture_strategy != "BLE" or not self.config.ble_target_name:
+        """Activate every consented BLE target before its first sample arrives."""
+        if self.config.capture_strategy != "BLE" or not self.config.ble_target_names:
             return
-        session = self.registry.start(self.config.ble_target_name)
-        if not self.transport or self._configured_session_published:
-            return
-        try:
-            self.transport.start_session(session)
-            self._configured_session_published = True
-        except Exception:
-            # Keep the in-memory consent mapping so samples can queue locally;
-            # retry the session announcement on the next collection cycle.
-            self._heartbeat_errors.add("BACKEND_UNAVAILABLE")
+        for target_name in self.config.ble_target_names:
+            session = self.registry.start(target_name)
+            if not self.transport or session.session_id in self._configured_session_published:
+                continue
+            try:
+                self.transport.start_session(session)
+                self._configured_session_published.add(session.session_id)
+            except Exception:
+                # Keep the in-memory consent mapping so samples can queue locally;
+                # retry the session announcement on the next collection cycle.
+                self._heartbeat_errors.add("BACKEND_UNAVAILABLE")
 
     def flush_pending_batch(self) -> Optional[ObservationBatch]:
         ready = self.batcher.flush()
@@ -349,7 +350,7 @@ def create_collector(config: EdgeConfig) -> ObservationCollector:
     if config.capture_strategy == "MONITOR":
         return MonitorModeCollector(config.wifi_interface, config.wifi_channel)
     if config.capture_strategy == "BLE":
-        return BLEAdvertisementCollector(config.ble_target_name, scan_seconds=config.ble_scan_seconds)
+        return BLEAdvertisementCollector(config.ble_target_names, scan_seconds=config.ble_scan_seconds)
     # AUTO is conservative: AP station mode is the only mode that can be
     # selected without first changing an interface into monitor mode.
     return APStationCollector(config.wifi_interface, config.wifi_channel)

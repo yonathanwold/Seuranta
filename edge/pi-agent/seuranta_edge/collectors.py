@@ -205,9 +205,28 @@ def parse_monitor_line(line: str, *, expected_channel: int) -> Optional[tuple[st
     return token, rssi, _safe_channel(channel)
 
 
-def parse_bluetooth_scan(output: str, *, target_name: str, device_token: str,
+def _ble_target_tokens(*, target_name: str | None, device_token: str | None,
+                       target_names: Iterable[str] | None) -> dict[str, str]:
+    """Return private advertised-name to token mappings for a BLE scan."""
+
+    if target_names is not None:
+        if target_name is not None or device_token is not None:
+            raise ValueError("use either target_names or target_name/device_token")
+        names = (target_names,) if isinstance(target_names, str) else tuple(target_names)
+        if not names or any(not isinstance(name, str) or not name for name in names):
+            raise ValueError("at least one non-empty BLE target name is required")
+        if len(names) != len(set(names)):
+            raise ValueError("BLE target names must be unique")
+        return {name: name for name in names}
+    if not target_name or not device_token:
+        raise ValueError("target_name and device_token are required")
+    return {target_name: device_token}
+
+
+def parse_bluetooth_scan(output: str, *, target_name: str | None = None,
+                         device_token: str | None = None, target_names: Iterable[str] | None = None,
                          expected_channel: int = 37) -> list[tuple[str, int, int]]:
-    """Extract only RSSI for an opted-in BLE advertised local name.
+    """Extract only RSSI for opted-in BLE advertised local names.
 
     BlueZ scan output contains transient Bluetooth addresses.  They are used
     only inside this parser to associate a name with a later RSSI event; no
@@ -216,8 +235,8 @@ def parse_bluetooth_scan(output: str, *, target_name: str, device_token: str,
     """
     if not isinstance(output, str):
         raise CollectorError("Bluetooth output was not text")
-    if not target_name or not device_token:
-        raise ValueError("target_name and device_token are required")
+    token_by_name = _ble_target_tokens(target_name=target_name, device_token=device_token,
+                                       target_names=target_names)
     channel = _safe_channel(expected_channel)
     names: dict[str, str] = {}
     pending_rssi: dict[str, int] = {}
@@ -232,21 +251,23 @@ def parse_bluetooth_scan(output: str, *, target_name: str, device_token: str,
             rssi = int(rssi_match.group("rssi"))
             if not -127 <= rssi <= 0:
                 raise CollectorError("Bluetooth output contained out-of-range RSSI")
-            if names.get(address) == target_name:
-                rows.append((device_token, rssi, channel))
+            matched_name = names.get(address)
+            if matched_name in token_by_name:
+                rows.append((token_by_name[matched_name], rssi, channel))
             else:
                 pending_rssi[address] = rssi
             continue
         name_match = _BT_NAME.match(detail)
         candidate_name = name_match.group("name").strip() if name_match else detail
-        if candidate_name == target_name:
+        if candidate_name in token_by_name:
             names[address] = candidate_name
             if address in pending_rssi:
-                rows.append((device_token, pending_rssi.pop(address), channel))
+                rows.append((token_by_name[candidate_name], pending_rssi.pop(address), channel))
     return rows
 
 
-def parse_btmgmt_scan(output: str, *, target_name: str, device_token: str,
+def parse_btmgmt_scan(output: str, *, target_name: str | None = None,
+                      device_token: str | None = None, target_names: Iterable[str] | None = None,
                       expected_channel: int = 37) -> list[tuple[str, int, int]]:
     """Extract opted-in BLE RSSI metadata from BlueZ management scan output.
 
@@ -257,12 +278,12 @@ def parse_btmgmt_scan(output: str, *, target_name: str, device_token: str,
 
     if not isinstance(output, str):
         raise CollectorError("Bluetooth output was not text")
-    if not target_name or not device_token:
-        raise ValueError("target_name and device_token are required")
+    token_by_name = _ble_target_tokens(target_name=target_name, device_token=device_token,
+                                       target_names=target_names)
     channel = _safe_channel(expected_channel)
     rows: list[tuple[str, int, int]] = []
     pending_rssi: Optional[int] = None
-    pending_target_name = False
+    pending_target_name: Optional[str] = None
     for line in output.splitlines():
         clean = _ANSI.sub("", line).strip()
         device = _BTMGMT_DEVICE_FOUND.search(clean)
@@ -271,28 +292,32 @@ def parse_btmgmt_scan(output: str, *, target_name: str, device_token: str,
             if not -127 <= rssi <= 0:
                 raise CollectorError("Bluetooth output contained out-of-range RSSI")
             name = _BTMGMT_NAME.search(device.group("details"))
-            inline_target = bool(name and name.group("name").strip() == target_name)
+            inline_target = name.group("name").strip() if name else None
             # BlueZ 5.82 can render EIR fields before its device-found line,
             # while older versions render the name immediately afterwards.
             # Retain only the adjacent RSSI/name state; Bluetooth addresses
             # are deliberately never retained or returned.
-            if inline_target or pending_target_name:
-                rows.append((device_token, rssi, channel))
+            if inline_target in token_by_name:
+                rows.append((token_by_name[inline_target], rssi, channel))
+                pending_rssi = None
+            elif pending_target_name:
+                rows.append((token_by_name[pending_target_name], rssi, channel))
                 pending_rssi = None
             else:
                 pending_rssi = rssi
-            pending_target_name = False
+            pending_target_name = None
             continue
         name = _BTMGMT_NAME.match(clean)
         if name:
-            if name.group("name").strip() == target_name:
+            candidate_name = name.group("name").strip()
+            if candidate_name in token_by_name:
                 if pending_rssi is not None:
-                    rows.append((device_token, pending_rssi, channel))
+                    rows.append((token_by_name[candidate_name], pending_rssi, channel))
                     pending_rssi = None
                 else:
-                    pending_target_name = True
+                    pending_target_name = candidate_name
             else:
-                pending_target_name = False
+                pending_target_name = None
     return rows
 
 
@@ -354,7 +379,7 @@ class MonitorModeCollector(ObservationCollector):
 
 
 class BLEAdvertisementCollector(ObservationCollector):
-    """Collect RSSI for one explicitly named iPhone BLE advertisement.
+    """Collect RSSI for explicitly named opted-in BLE advertisements.
 
     Bluetooth remains independent of the Pi's Wi-Fi backhaul, so this works
     with the iPhone hotspot network while avoiding unsupported Wi-Fi monitor
@@ -364,13 +389,17 @@ class BLEAdvertisementCollector(ObservationCollector):
     that expose RSSI events there.
     """
 
-    def __init__(self, target_name: str, *, scan_seconds: int = 3,
+    def __init__(self, target_names: str | Iterable[str], *, scan_seconds: int = 3,
                  adapter: Optional[CommandAdapter] = None) -> None:
-        if not target_name:
-            raise ValueError("BLE target name is required")
+        names = (target_names,) if isinstance(target_names, str) else tuple(target_names)
+        if not names or any(not isinstance(name, str) or not name for name in names):
+            raise ValueError("at least one BLE target name is required")
+        if len(names) != len(set(names)):
+            raise ValueError("BLE target names must be unique")
         if not 1 <= scan_seconds <= 30:
             raise ValueError("BLE scan duration must be from 1 through 30 seconds")
-        self.target_name = target_name
+        self.target_names = names
+        self.target_name = names[0]
         self.scan_seconds = scan_seconds
         self.adapter = adapter or SubprocessCommandAdapter()
 
@@ -384,9 +413,9 @@ class BLEAdvertisementCollector(ObservationCollector):
         except CollectorError:
             output = self.adapter.run(("bluetoothctl", "--timeout", str(self.scan_seconds), "scan", "on"),
                                       timeout_s=float(self.scan_seconds + 3))
-            rows = parse_bluetooth_scan(output, target_name=self.target_name, device_token=self.target_name)
+            rows = parse_bluetooth_scan(output, target_names=self.target_names)
         else:
-            rows = parse_btmgmt_scan(output, target_name=self.target_name, device_token=self.target_name)
+            rows = parse_btmgmt_scan(output, target_names=self.target_names)
         now = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         # The advertised name is intentionally the raw token only in memory;
         # EdgeAgent immediately maps it to a run-scoped HMAC session ID.

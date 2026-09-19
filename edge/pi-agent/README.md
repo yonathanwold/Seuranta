@@ -36,13 +36,16 @@ Required names are `ANCHOR_ID`, `ANCHOR_X`, `ANCHOR_Y`, `ANCHOR_FLOOR`,
 
 ### BLE iPhone positioning mode
 
-Set `CAPTURE_STRATEGY` to `BLE` when a consented iPhone advertises the fixed
-local Bluetooth name in `BLE_TARGET_NAME` (for example `Seuranta-iPhone`).
-`BLE_SCAN_SECONDS` defaults to `3`.  The agent scans only for that exact name,
+Set `CAPTURE_STRATEGY` to `BLE` when consented phones advertise unique local
+Bluetooth names. Set `BLE_TARGET_NAME` for the legacy single-phone setup, or
+set `BLE_TARGET_NAMES` to a comma-separated list (for example
+`Seuranta-iPhone,Seuranta-Phone-2`). In a JSON config, use a
+`ble_target_names` array instead. `BLE_SCAN_SECONDS` defaults to `3`.
+Every Pi must use the same list. The agent scans only for those exact names,
 keeps Bluetooth addresses in memory only long enough to pair a name and RSSI,
-then HMACs the configured name into the shared run-scoped session ID before
-sending metadata.  It uses the Pi's Bluetooth radio, leaving `wlan0` connected
-to the hotspot for API traffic.
+then HMACs each configured name into a separate shared run-scoped session ID
+before sending metadata. It uses the Pi's Bluetooth radio, leaving `wlan0`
+connected to the hotspot for API traffic.
 
 See `example-ble-config.json` and
 [`docs/hardware/star-localization.md`](../../docs/hardware/star-localization.md)

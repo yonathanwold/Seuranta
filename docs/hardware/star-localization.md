@@ -98,11 +98,14 @@ outlier resistance than the three-anchor minimum.
 Use [`edge/pi-agent/example-ble-config.json`](../../edge/pi-agent/example-ble-config.json)
 as a template for each Pi.  Give each Pi a distinct `anchor_id`, `anchor_x`,
 and `anchor_y`; keep the same `deployment_id`, `building_id`, API URL,
-`ble_target_name`, and run secret on all four Pis.  The agent runs
-`btmgmt --timeout … find -l` for short BLE scans and emits only RSSI for the
-exact configured name. This is important for iPhone advertisers: BlueZ's
-ordinary `bluetoothctl` scan can see the name without producing a usable RSSI
-event.
+`ble_target_names` list, and run secret on all four Pis. Give each
+consented phone a distinct fixed LightBlue local name, such as
+`Seuranta-iPhone`, `Seuranta-Phone-2`, and `Seuranta-Phone-3`. The agent runs
+`btmgmt --timeout … find -l` for short BLE scans and emits only RSSI for those
+exact configured names. Each name becomes a separate run-scoped HMAC session,
+so neither a Bluetooth address nor the phone name is sent to the API. This is
+important for iPhone advertisers: BlueZ's ordinary `bluetoothctl` scan can see
+the name without producing a usable RSSI event.
 
 `btmgmt` uses BlueZ's management socket. Keep the agent as the dedicated
 `seuranta` user and scope the required Linux capability to its systemd service

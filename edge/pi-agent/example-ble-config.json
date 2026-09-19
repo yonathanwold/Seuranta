@@ -10,7 +10,7 @@
   "wifi_channel": 6,
   "wifi_interface": "wlan0",
   "capture_strategy": "BLE",
-  "ble_target_name": "Seuranta-iPhone",
+  "ble_target_names": ["Seuranta-iPhone"],
   "ble_scan_seconds": 3,
   "observation_interval_ms": 1000,
   "heartbeat_interval_ms": 10000,

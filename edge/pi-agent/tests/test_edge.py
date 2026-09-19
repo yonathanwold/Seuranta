@@ -77,6 +77,11 @@ class EdgeTests(unittest.TestCase):
             EdgeConfig(**{**config.__dict__, "capture_strategy": "BLE"})
         ble = EdgeConfig(**{**config.__dict__, "capture_strategy": "BLE", "ble_target_name": "Seuranta-iPhone"})
         self.assertEqual(ble.redacted_diagnostics()["ble_target_name"], "<configured>")
+        self.assertEqual(ble.ble_target_names, ("Seuranta-iPhone",))
+        multi_ble = EdgeConfig(**{**config.__dict__, "capture_strategy": "BLE", "ble_target_name": "",
+                                  "ble_target_names": ["Seuranta-Phone-1", "Seuranta-Phone-2"]})
+        self.assertEqual(multi_ble.ble_target_names, ("Seuranta-Phone-1", "Seuranta-Phone-2"))
+        self.assertEqual(multi_ble.redacted_diagnostics()["ble_target_names"], "<2 configured>")
 
     def test_env_config(self):
         config = load_config({
@@ -164,6 +169,18 @@ class EdgeTests(unittest.TestCase):
         readings = BLEAdvertisementCollector("Seuranta-iPhone", adapter=pipe_adapter).collect()
         self.assertTrue(pipe_adapter.open_stdin_used)
         self.assertEqual(len(readings), 1)
+
+        multi_target_scan = "\n".join((
+            "hci0 dev_found: aa:bb:cc:dd:ee:ff type LE Random rssi -58 flags 0x00000000 AD flags 0x06 name Seuranta-Phone-1",
+            "hci0 dev_found: 11:22:33:44:55:66 type LE Random rssi -63 flags 0x00000000",
+            "name Seuranta-Phone-2",
+        ))
+        rows = parse_btmgmt_scan(multi_target_scan, target_names=("Seuranta-Phone-1", "Seuranta-Phone-2"))
+        self.assertEqual(rows, [("Seuranta-Phone-1", -58, 37), ("Seuranta-Phone-2", -63, 37)])
+        readings = BLEAdvertisementCollector(("Seuranta-Phone-1", "Seuranta-Phone-2"),
+                                              adapter=FakeAdapter(multi_target_scan)).collect()
+        self.assertEqual([(item.device_token, item.rssi_dbm, item.channel) for item in readings],
+                         [("Seuranta-Phone-1", -58, 37), ("Seuranta-Phone-2", -63, 37)])
 
     def test_http_transport_normalizes_edge_values_for_the_api(self):
         transport = CapturingHttpTransport()
@@ -302,6 +319,25 @@ class EdgeTests(unittest.TestCase):
                 payload_text = json.dumps(transport.requests)
                 self.assertNotIn("device-a", payload_text)
                 self.assertNotIn("device-b", payload_text)
+
+    def test_ble_agent_starts_each_configured_phone_session(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = EdgeConfig(**{**config_from_defaults(secret="0123456789abcdef").__dict__,
+                                   "capture_strategy": "BLE", "ble_target_name": "",
+                                   "ble_target_names": ("Seuranta-Phone-1", "Seuranta-Phone-2"),
+                                   "buffer_path": str(Path(directory) / "queue.sqlite3")})
+            transport = RecordingTransport()
+            collector = MockCollector(sessions=["Seuranta-Phone-1", "Seuranta-Phone-2"], seed=3)
+            with SQLiteBuffer(config.buffer_path) as buffer:
+                agent = EdgeAgent(config, run_id="run-1", collector=collector, buffer=buffer, transport=transport)
+                observations = agent.collect_once()
+                self.assertEqual(len(observations), 2)
+                session_requests = [payload for route, payload in transport.requests if route == "POST /api/v1/sessions"]
+                self.assertEqual(len(session_requests), 2)
+                self.assertNotEqual(session_requests[0]["session_id"], session_requests[1]["session_id"])
+                payload_text = json.dumps([item.to_dict() for item in observations] + transport.requests)
+                self.assertNotIn("Seuranta-Phone-1", payload_text)
+                self.assertNotIn("Seuranta-Phone-2", payload_text)
 
     def test_heartbeat_shape_and_sequence(self):
         heartbeat = NodeHeartbeat(

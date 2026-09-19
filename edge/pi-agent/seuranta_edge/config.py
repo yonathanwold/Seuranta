@@ -30,6 +30,7 @@ _ENV_NAMES = {
     "buffer_path": "BUFFER_PATH",
     "demo_run_secret": "DEMO_RUN_SECRET",
     "ble_target_name": "BLE_TARGET_NAME",
+    "ble_target_names": "BLE_TARGET_NAMES",
     "ble_scan_seconds": "BLE_SCAN_SECONDS",
 }
 
@@ -59,12 +60,34 @@ class EdgeConfig:
     buffer_path: str
     demo_run_secret: str
     ble_target_name: str = ""
+    ble_target_names: tuple[str, ...] = ()
     ble_scan_seconds: int = 3
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "ble_target_names", self._combined_ble_target_names())
         errors = self.validation_errors()
         if errors:
             raise ValueError("invalid edge configuration: " + "; ".join(errors))
+
+    def _combined_ble_target_names(self) -> tuple[object, ...]:
+        """Normalize legacy and multi-device BLE names into one private list."""
+
+        values: list[object] = []
+        if self.ble_target_name:
+            values.append(self.ble_target_name)
+        configured = self.ble_target_names
+        if isinstance(configured, str):
+            values.extend(item.strip() for item in configured.split(","))
+        elif isinstance(configured, (tuple, list)):
+            values.extend(configured)
+        elif configured:
+            values.append(configured)
+
+        unique: list[object] = []
+        for value in values:
+            if value not in unique:
+                unique.append(value)
+        return tuple(unique)
 
     def validation_errors(self) -> list[str]:
         errors: list[str] = []
@@ -95,9 +118,10 @@ class EdgeConfig:
             errors.append("demo_run_secret must be at least 16 UTF-8 bytes and is never logged")
         if not isinstance(self.ble_scan_seconds, int) or isinstance(self.ble_scan_seconds, bool) or not 1 <= self.ble_scan_seconds <= 30:
             errors.append("ble_scan_seconds must be an integer from 1 through 30")
-        if self.capture_strategy == "BLE":
-            if not isinstance(self.ble_target_name, str) or not _SAFE_ID.fullmatch(self.ble_target_name):
-                errors.append(f"ble_target_name must match {_SAFE_ID.pattern} when capture_strategy is BLE")
+        if not all(isinstance(name, str) and _SAFE_ID.fullmatch(name) for name in self.ble_target_names):
+            errors.append(f"ble_target_names must each match {_SAFE_ID.pattern}")
+        if self.capture_strategy == "BLE" and not self.ble_target_names:
+            errors.append("at least one BLE target name is required when capture_strategy is BLE")
         return errors
 
     def redacted_diagnostics(self) -> dict[str, Any]:
@@ -107,6 +131,8 @@ class EdgeConfig:
         result["demo_run_secret"] = "<redacted>"
         if result["ble_target_name"]:
             result["ble_target_name"] = "<configured>"
+        if result["ble_target_names"]:
+            result["ble_target_names"] = f"<{len(self.ble_target_names)} configured>"
         return result
 
     @classmethod
@@ -144,7 +170,8 @@ class EdgeConfig:
             wifi_interface=str(value("wifi_interface")), capture_strategy=str(value("capture_strategy")).upper(),
             observation_interval_ms=as_int("observation_interval_ms"), heartbeat_interval_ms=as_int("heartbeat_interval_ms"),
             batch_max_size=as_int("batch_max_size"), buffer_path=str(value("buffer_path")),
-            demo_run_secret=str(value("demo_run_secret")), ble_target_name=str(value("ble_target_name", "")),
+            demo_run_secret=str(value("demo_run_secret")), ble_target_name=value("ble_target_name", ""),
+            ble_target_names=value("ble_target_names", ()),
             ble_scan_seconds=as_int("ble_scan_seconds") if value("ble_scan_seconds") is not None else 3,
         )
 
