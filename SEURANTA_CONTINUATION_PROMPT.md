@@ -18,7 +18,7 @@ npm.cmd test
 npm.cmd run build
 ```
 
-The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` to obtain the exact final value. This handoff revision cannot safely contain its own SHA; the latest pre-handoff SHA before this handoff revision is `e391830aca0cf91727f8c47389e9bc55a5fdab4a` (`fix(app): retarget focus and enforce live scope`).
+The final SHA is deliberately self-referential: after the final commit, run `git rev-parse HEAD` to obtain the exact final value. This handoff revision cannot safely contain its own SHA; the latest pre-handoff SHA before this handoff revision is `b8dec4a6abae792f4bb191ad240da823768cd7ec` (`fix(app): reject unknown live delta modes`).
 
 ## Inspect before editing
 
