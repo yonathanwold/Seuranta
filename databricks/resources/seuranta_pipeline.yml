@@ -1,0 +1,28 @@
+resources:
+  jobs:
+    seuranta_daily_metrics:
+      name: seuranta-daily-metrics
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+      tasks:
+        - task_key: create_tables
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../sql/00_schema.sql
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+        - task_key: gold_metrics
+          depends_on:
+            - task_key: create_tables
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../sql/30_gold_metrics.sql
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}

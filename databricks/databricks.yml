@@ -1,0 +1,20 @@
+bundle:
+  name: seuranta-atlas
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    default: main
+  schema:
+    default: seuranta
+  warehouse_id:
+    default: ""
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${var.workspace_host}
